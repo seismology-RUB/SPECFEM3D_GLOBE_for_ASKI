@@ -1,0 +1,49 @@
+1D cubic-spline-interpolation background model, used for SPECFEM3D_GLOBE for ASKI. THIS FIRST ROW IS IGNORED (for meaning of the following lines, see below)
+4
+2 2 4 5
+0.0     2.6        5.8        3.2        600    57822
+15.0    2.6        5.8        3.2        600    57822
+15.0    2.9        6.8        3.9        600    57822
+24.0    2.9        6.8        3.9        600    57822
+24.0    3.38076    8.11061    4.49094    600    57822
+40.0    3.37906    8.10119    4.48486    600    57822
+60.0    3.37688    8.08907    4.47715    600    57822
+80.0    3.37471    8.07689    4.46954    600    57822
+80.0    3.37471    8.07688    4.46953    80     57822
+115.0   3.37091    8.05540    4.45643    80     57822
+150.0   3.36710    8.03370    4.44361    80     57822
+185.0   3.36330    8.01180    4.43108    80     57822
+220.0   3.35950    7.98970    4.41885    80     57822
+
+
+
+
+Everything below the expected content is ignored, hence is this comment block.
+
+The table of values starting from line 4 contains the depth and the (isotropic) model values at that depth. 
+The columns are separated by white space and assume the meaning:
+depth [km]  density [g/cm^3]  vp [km/s]  vs [km/s]  Qmu  Qkappa
+The depth is assumed to be monotonically INCREASING, the first line should have depth 0. 
+
+The second and third line simply define the characteristics of the depth nodes which are defined in the table
+(for convenience when reading in the file):
+Line two must contain the number of layers, between which discontinuities are allowed. 
+At the boundary of any two layers, there should be a "double node", i.e. two lines with SAME depth. There is no spline interpolation
+done beyond any layer boundaries, i.e. over any double node. Different model values on either side of a double node
+will be interpreted as a discontinuity in the model. 
+The third line must contain the number of nodes inside each layer. 
+
+
+The above example model constitutes the first 200 km of PREM (with the ocean layer removed). 
+It has 4 layers. 
+The first layer has 2 nodes (at 0.0 and 15.0 km depth) and the model is constant in this layer (same model values at the two nodes).
+There is a discontinuity between first and second layer, since the model values are different in the two 15km-lines. 
+The second layer has 2 nodes (at 15.0 and 24.0 km depth) and the model is a constant gradient in this layer, since a spline 
+between just two points will be a straight line. 
+The third layer has 4 nodes (at 24.0, 40.0, 60.0 and 80.0 km depth), there will be a cubic spline fitted through these 4 points. 
+Note, that there is no discontinuity in density at 80.0 km depth (i.e. between the third and fourth layer), since the two
+80.0km-lines have the very same density value. (By setting always double nodes and choosing the same model values at the double nodes,
+this ways you may create a model which is linearly interpolated between the nodes)
+The fourth layer has 5 nodes (at 80.0, 115.0, 150.0, 185.0 and 220.0 km depth) ...
+
+The definition of model values of this example model stops at 220km depth. THIS DOES NOT DEFINE ANY MODEL VALUES BELOW 220km DEPTH!

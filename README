@@ -1,0 +1,142 @@
+####################################################
+THIS IS A VERY SHORT DOCUMENTATION ON HOW TO GET
+STARTED WITH
+
+  SPECFEM3D_GLOBE-7.0.0  for  ASKI - version 1.0
+
+####################################################
+
+SPECFEM3D for ASKI, as well as ASKI and some of its components, documentation 
+and examples are available via http://www.rub.de/aski
+Please also refer to this address in case you want to get in touch with the
+authors, who are very eager on any feedback, especially about problems you may 
+encounter installing or using the software.
+
+The main authors are Florian Schumacher (Ruhr-University Bochum, Germany)
+and Wolfgang Friederich (Ruhr-University Bochum, Germany), 2016.
+
+SPECFEM3D_GLOBE version 7.0.0 and ASKI version 1.0 are free software: 
+you can redistribute it and/or modify it under the terms of the GNU 
+General Public License as published by the Free Software Foundation, 
+either version 2 of the License, or (at your option) any later version.
+SPECFEM3D_GLOBE version 7.0.0 and ASKI version 1.0 are distributed in 
+the hope that they will be useful, but WITHOUT ANY WARRANTY; without 
+even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+PURPOSE.  See the GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with SPECFEM3D_GLOBE version 7.0.0 and ASKI version 1.0.
+If not, see <http://www.gnu.org/licenses/>.
+
+
+##########
+REQUIREMENTS
+##########
+1) You need a working installation of the SPECFEM3D_GLOBE code, including 
+   modifications for usage with ASKI:
+
+-> You can either download and install the modified SPECFEM3D version 
+   SPECFEM3D_GLOBE_V7.0.0_extended_for_ASKI.tar.gz, available via 
+   http://www.rub.de/aski, which already includes modifications for ASKI,
+-> OR use your running installation of SPECFEM3D_GLOBE and extend it for usage 
+   with ASKI, as described below (item "EXTEND REGULAR SPECFEM3D"). Also refer to 
+   the manual SPECFEM3D_GLOBE_for_ASKI_manual.pdf
+
+   IN BOTH CASES YOU STILL MUST INSTALL THIS PACKAGE 
+   SPECFEM3D_GLOBE_for_ASKI_1.0.tar.gz (item "INSTALL", below).
+
+2) You need basic experience in using the regular SPECFEM3D_GLOBE software!
+
+3) Also you require an installation of the ASKI 1.0 main package (available via 
+   http://www.rub.de/aski). The ASKI installation directory will be referred to 
+   below as "ASKI_1.0/"
+
+
+##########
+DOWNLOAD AND EXTRACT TAR BALL
+##########
+You should have downloaded the tar ball SPECFEM3D_GLOBE_for_ASKI_1.0.tar.gz 
+from http://www.rub.de/aski . Please extract it in such a way, that the directory 
+SPECFEM3D_GLOBE_for_ASKI is contained in the ASKI installation directory 
+ASKI_1.0/
+
+
+##########
+USAGE, DOCUMENTATION
+##########
+read the documentation SPECFEM3D_GLOBE_for_ASKI_manual.pdf, avaliable via 
+http://www.rub.de/aski for information on how to set parameters correctly and how 
+to use SPECFEM3D as a forward solver for ASKI.
+
+
+##########
+INSTALLATION
+##########
+You need to compile few more ASKI binaries:
++ in ASKI_1.0/SPECFEM3D_GLOBE_for_ASKI/Makefile , set COMPILER appropriately, 
+   adjust FFLAGS if required and set the variables BLAS, LAPACK, just as you did 
+   for installing main package ASKI_1.0
++ issue the command
+      make all
+   from directory ASKI_1.0/SPECFEM3D_GLOBE_for_ASKI/
+After that, ASKI_1.0/bin should contain the new binaries.
+
+
+##########
+EXTEND REGULAR SPECFEM3D
+##########
+If you have a regular SPECFEM3D_GLOBE installation which has not significantly
+different functionality compared with SPECFEM3D_GLOBE release version 7.0.0 
+(2015-07-10), you can extend it for ASKI by the following steps:
+
+1) install SPECFEM3D_GLOBE on your system and make it run, gain 
+   experience in using it (below, the installation path is refered to as 
+   "SPECFEM3D/")
+
+2) append content of file ASKI_1.0/SPECFEM3D_GLOBE_for_ASKI/specfem3D_par_ASKI.f90 to file
+   SPECFEM3D/src/specfem3D/specfem3D_par.F90
+
+3) in SPECFEM3D/src/specfem3D/prepare_timerun.F90 in subroutine prepare_timerun :
+   add the following line at the beginning of the subroutine, after the "use ..." statements:
+     use specfem_for_ASKI_par
+   add the following line close to the end of the subroutine, before synchronize_all() is called:  
+     call prepare_timerun_ASKI()
+
+4) in SPECFEM3D/src/specfem3D/iterate_time.F90 in subroutine iterate_time : 
+   add the following line at the beginning of the subroutine, after the "use ..." statements:
+     use specfem_for_ASKI_par
+   add the following line just before the "enddo" of the main time loop:
+      call write_ASKI_output()
+
+5) append content of file ASKI_1.0/SPECFEM3D_GLOBE_for_ASKI/ASKI_external_model.f90 to file
+   SPECFEM3D/src/meshfem3D/meshfem3D_par.f90
+
+6) in SPECFEM3D/src/meshfem3D/setup_model.f90 in subroutine setup_model : 
+   add the following line at the beginning of the subroutine, after the "use ..." statements:
+     use ASKI_external_model
+   add the following line just before info output is written to IMAIN, after the 3D models are broadcasted:
+     call broadcast_ASKI_external_model(myrank)
+
+7) in SPECFEM3D/src/meshfem3D/get_model.F90 in subroutine get_model : 
+   add the following line at the beginning of the subroutine, after the "use ..." statements:
+     use ASKI_external_model
+   add the following lines just before define elastic parameters in the model (i.e. setting all 
+   arrays rhostore,kappavstore,muvstore,...) , just after all other "get model" routines:
+        call values_ASKI_external_model(iregion_code,xmesh,ymesh,zmesh,r, &
+                              vpv,vph,vsv,vsh,rho,Qmu,Qkappa,eta_aniso,dvp, &
+                              c11,c12,c13,c14,c15,c16,c22,c23,c24,c25, &
+                              c26,c33,c34,c35,c36,c44,c45,c46,c55,c56,c66)
+
+8) append content of file ASKI_1.0/SPECFEM3D_GLOBE_for_ASKI/parallel_ASKI.f90 
+   to file SPECFEM3D/src/shared/parallel.f90
+
+9) recompile the relevant SPECFEM3D binaries by issuing "make xmeshfem3D xspecfem3D" in directory SPECFEM3D/
+
+10) in order to use ASKI in SPECFEM3D simulations, copy file 
+    ASKI_1.0/SPECFEM3D_GLOBE_for_ASKI/Par_file_ASKI to your respective DATA/ path
+    (which is e.g. SPECFEM3D/EXAMPLES/my_example/DATA/ , or SPECFEM3D/DATA/ ). This 
+    file must be adjusted for any specific simulation (just as all other parameter files), 
+    refer to the documentation on how to use it.
+
+
+Additionally, you may refer to the manual SPECFEM3D_GLOBE_for_ASKI_manual.pdf
+for any further details on extending a regular SPECFEM3D code copy for use with ASKI.

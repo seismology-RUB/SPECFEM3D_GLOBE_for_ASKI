@@ -1,0 +1,40 @@
+Defines combined Checker-Spike model anomalies for resolution tests THIS FIRST ROW IS IGNORED (for meaning of the following lines, see below)
+40.0   20.0    [km] lat-direction width of checkers on surface and width of gaps between them
+40.0   20.0    [km] lon-direction width of checkers on surface and width of gaps between them
+8              number of checker layers in depth
+3.0  13.0  23.0  40.0  50.0  70.0   85.0  110.0    upper depths of checker layers [km]
+5.0   5.0   5.0   5.0  10.0  10.0   20.0   20.0    respective thicknesses of checker layers [km]
+0.0  5.0  4.0  0.0  0.0    relative model anomaly (positive percentage) of  density, vp, vs, Qmu, Qkappa
+
+Everything below the expected content is ignored, hence is this comment block.
+
+A CHECKER-SPIKE MODEL LIKE THIS IS ONLY SUPPORTED FOR 1-CHUNK SIMULATIONS!
+
+from the above lines, only the expected content is read (e.g. just two numbers are read from lines 2-3) and everything behind is ignored
+
+lines 2-3 define the lateral distribution of checkers and background gaps in between in lat and long direction 
+       of the model chunk. The given sizes [km] at the surface of the Earth are projected into depth and 
+       distributed equi-angularly on the model chunk
+       in the above example in both, lat and lon direction of the chunk, there will be 40 km checker patters
+       with 20 km lateral gaps between the checker anomalies. Set the second values on the lines to 0.0 in order 
+       to define a pure checker model
+       At the lateral outer boundaries of the chunk, there will be partial checker cells.
+
+line 4 defines the number of depth layers in which there should be checker patterns. Must be a positive integer
+
+line 5 defines the depth values [km] of the upper boundaries of the checker layer.
+
+line 6 defines the thicknesses [km] of the checker layers.
+       In the above example, there will be 8 depth layers of checker cells. The uppermost checker cells
+       start at a depth of 3km and cover the medium up to a depth of 8km. The second checker layer starts at
+       depth 13.0km and also has a thickness of 5km, i.e. goes to depth 18km. Etc.
+       Lines 5 and 6 must be chosen consistently, i.e. checker layers MUST NOT overlap and the layers must
+       INCREASE in depth. 
+
+finally, line 7 contains the relative model anomaly values [positive percentage] which will be used to define
+the checker anomalies, always varying +anomaly -anomaly.
+Line 7 must contain 5 percentage values separated by white space, refering to the isotropic parameters
+density   vp   vs   Qmu   Qkappa
+For example, a line 7 of form
+0.0  5.0  4.0  0.0  0.0
+will produce a checker model with +-5% vp and +-4% vs and NO anomalies in density, Qmu or Qkappa.

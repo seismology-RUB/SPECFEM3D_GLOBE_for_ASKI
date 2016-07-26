@@ -1,0 +1,240 @@
+#------------------------------------------------------------------------------------
+# ASKI EXTERNAL MODEL
+#
+# import inverted models to SPECFEM3D_GLOBE
+#------------------------------------------------------------------------------------
+# First the SPECFEM3D model is set, as defined by standard SPECFEM mechanisms (defined in Par_file). 
+# Then, ONLY IF INDICATED BELOW, this model is overwritten by the ASKI 1D background model at all depths where it is defined. 
+# After that, ONLY IF INDICATED BELOW, an ASKI inverted model is superimposed to the existing model (will define absolute values, 
+# but at the boundaries of the inversion domain it will smooth out to the existing model)
+# Yet after that, ONLY IF INDICATED BELOW AND ONLY FOR 1-CHUNK SIMULATIONS, one can superimpose a checkerboard 
+# of relative model anomalies. This checkerboard can be superimposed to any standard SPECFEM model (by not using background 
+# or inverted model), as well as the ASKI background model or the ASKI inverted model (setting respective flags accordingly).
+
+
+# USE_ASKI_BACKGROUND_MODEL indicates whether SPECFEM3D_GLOBE should use the global 1D 
+# reference model as defined in the file given by character string 
+# FILE_ASKI_BACKGROUND_MODEL , relative to "DATA/" .
+# (will simply be imposed on all GLL points, dependent on depth! THIS MODEL WILL NOT AFFECT 
+# THE MESHING OF DISCONTINUITIES ETC.!!)
+
+USE_ASKI_BACKGROUND_MODEL = .false.
+FILE_ASKI_BACKGROUND_MODEL = 
+
+# IMPOSE_ASKI_INVERTED_MODEL indicates whether SPECFEM3D_GLOBE should impose the ASKI inverted 
+# model as defined in the file given by character string FILE_ASKI_INVERTED_MODEL , relative to "DATA/" .
+# This model will be set in the region of the inversion grid, where it was derived.
+# Interpolation type can be either shepard_standard or shepard_factor_radius . 
+# shepard_standard is the same as shepard_factor_radius with factor_shepard_radius = 2.0 
+# (using method shepard_factor_radius with factor_shepard_radius > 2.0 will include more control 
+# nodes (further away) for the interpolation). In case of method shepard_standard, the given radius is ignored
+
+IMPOSE_ASKI_INVERTED_MODEL = .false.
+FILE_ASKI_INVERTED_MODEL = 
+ASKI_INVERTED_MODEL_INTERPOLATION_TYPE = shepard_standard
+ASKI_INVERTED_MODEL_FACTOR_SHEPARD_RADIUS = 2.0
+
+
+# IMPOSE_ASKI_CHECKER_MODEL indicates whether SPECFEM3D_GLOBE should impose relative checkerboard 
+# anomalies onto the final model as defined in the file given by character string 
+# FILE_ASKI_CHECKER_MODEL , relative to "DATA/" .
+# A CHECKER-SPIKE MODEL LIKE THIS IS ONLY SUPPORTED FOR 1-CHUNK SIMULATIONS!
+
+IMPOSE_ASKI_CHECKER_MODEL = .false.
+FILE_ASKI_CHECKER_MODEL = 
+
+
+#------------------------------------------------------------------------------------
+# ASKI OUTPUT
+#
+# producing kernel green tensor / kernel displacement files
+#------------------------------------------------------------------------------------
+
+
+# parameter COMPUTE_ASKI_OUTPUT controls if any ASKI output files (i.e. kernel green tensor / 
+# kernel displacement files) are produced
+
+  COMPUTE_ASKI_OUTPUT = .true.
+
+  
+# Decide, whether to ONLY produce the main ASKI output file (at the beginning of this simulation, filename 'ASKI_outfile.main') 
+# and then abort the simulation.
+# This can be useful if you want to first run initBasics to check the ASKI output volume and the background model etc.
+
+  ASKI_MAIN_FILE_ONLY = .false.
+
+  
+# absolute output filename including absolute path (will be used to open the output file as is),
+# i.e. in case of a green tensor simulation, outfile should contain the extension "_[green_tensor_component]"
+# ASKI_outfile is handled as a basename, to which ".main" and for each frequency ".jf######" 
+# (e.g. ".jf000013" for frequency index 13) is appended
+
+  ASKI_outfile = /rscratch/minos27/Kernel/specfem3D/inversions/test/new_specfem3d/iteration_step_001/kernel_displacements/S001
+
+
+# choose to overwrite existing ASKI output files, or to abort if files already exist
+
+  OVERWRITE_ASKI_OUTPUT = .true.
+
+
+# id of ASKI output (e.g. eventID, station name plus component, etc.)
+
+  ASKI_output_ID = S001
+
+
+# choose to deconvolve the derivative of the source time function from the wavefield spectra before writing them to files.
+# select .true. for any Green function computations!
+# even if a heaviside source time function is used, the velocity field is not exactly a Green function ( = displacement wavefield
+# w.r.t. an impulse source time function), since a steep error function is used by SPECFEM to resemble a quasi-heaviside function.
+# this steep error function, furthermore, is dependent on timestep DT! 
+# hence, only by deconvolution of (the derivative of) this quasi-heaviside source time function, the real Green function, 
+# which is independent of the time step can be computed.
+# HOWEVER, FOR NOW IT IS ASSUMED THAT A quasi-Heaviside IS USED! ANY OTHER ACTUALLY USED STF IS NOT ACCOUNTED FOR, WHEN ASKI_DECONVOLVE_STF = .true.
+
+  ASKI_DECONVOLVE_STF = .true.
+
+
+#------------------------------------------------------------------------------------
+# SPECIAL SOURCE DEFINITION
+#
+#   since SPECFEM3D GLOBE does not properly support the use of single force sources,
+#   the computation of Green functions requires some additional definitions which
+#   are required by the ASKI extension modules of SPECFEM3D GLOBE
+#------------------------------------------------------------------------------------
+
+
+# flag to define whether this type of ASKI output is a Green function wavefield (i.e. a backpropagation 
+# from a receiver) or not.
+# set to .false. if this is a forward wavefield computation.
+# the source position and source depth of this Green function (i.e. techincally the respective ASKI receiver 
+# position) must be defined as usual in the CMTSOLUTION file.
+
+  COMPUTE_ASKI_GREEN_FUNCTION = .false.
+
+
+# define the direction of the single force source of this Green function (if COMPUTE_ASKI_GREEN_FUNCTION = .true.)
+# at the moment, the following directions are supported (following the ASKI nomenclature for receiver components): 
+#   N, E, UP (pointing to local 'N'orth, 'E'ast or 'UP' direction, dependent on source position)
+#   CX, CY, CZ (global Cartesian X, Y, Z directions)
+
+  ASKI_GREEN_FUNCTION_COMPONENT = UP
+
+
+#------------------------------------------------------------------------------------
+# FREQUENCY DISCRETIZATION
+#
+#   the double precision df[Hz] and integer values jf have the following meaning:
+#   the spectra are saved for all frequencies f = (jf)*df [Hz]
+#------------------------------------------------------------------------------------
+
+
+# predefined df, that is used to evaluate spectrum (in case we want to do an inverse FT, we need to choose with care 
+# df=1/length_of_time_series and suitably high frequency indices (dependent on frequency content), as
+# we could lose periodicity (if in exp^(-i2pi(k)(n)/N) "N" is no integer, these are no roots of 1 anymore))
+# save the spectra for frequencies f = (ASKI_jf)*ASKI_df (ASKI_nf many)
+
+  ASKI_df = 10.0
+  ASKI_nf = 23
+  ASKI_jf = 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33
+
+
+# choose precision of Discrete Fourier Transform, if there is enough memory available, it is highly recommended
+# to use ASKI_DFT_double = .true. in which case double complex spectra are hold in memory (single precision is 
+# written to file, though, but less roundoffs during transformation)
+# otherwise choose ASKI_DFT_double = .false. in which case single precision spectra will be used in memory
+# the transformation coefficients exp^(-i*2pi*f*t) are always in double complex precision!
+
+  ASKI_DFT_double = .true.
+
+
+# decide whether the (oversampled, noisy, ...) time series should be tapered by a hanning taper (on tail)
+# before (i.e. while) applying the discrete fourier transform
+# if ASKI_DFT_apply_taper = .true. the value of ASKI_DFT_taper_percentage (between 0.0 and 1.0) defines the amount of
+# total time for which the hanning taper will be applied at the tail of the time series
+
+  ASKI_DFT_apply_taper = .true.
+  ASKI_DFT_taper_percentage = 0.05
+
+
+#------------------------------------------------------------------------------------
+# INVERSION GRID
+#
+# ASKI supports several types of inversion grids for FORWARD_METHOD = SPECFEM3D:
+#
+#   ASKI_type_inversion_grid = 1, (TYPE_INVERSION_GRID = schunkInversionGrid)
+#      ASKI internal, but SPECFEM independent spherical inverison grid (simple chunk inversion grid)
+#
+#   ASKI_type_inversion_grid = 2, (TYPE_INVERSION_GRID = scartInversionGrid) NOT TO BE USED WITH SPECFEM3D GLOBE!
+#      ASKI internal, but SPECFEM independent cartesian inversion grid:
+#      the values for ASKI output are stored at all inner GLL points of spectral elements which lie
+#      inside the ASKI output volume
+#      ASKI loactes the coordinates of those points inside the inversion grid cells and computes
+#      integration weights for them
+#
+#   ASKI_type_inversion_grid = 3, (TYPE_INVERSION_GRID = ecartInversionGrid)
+#      external inversion grid provided e.g. by CUBIT, which may contain tetrahedra, as well as hexahedra
+#      which must be defined in the coordinates used for global wavefield points (i.e. usually global Cartesian coordinates in km).
+#      as in case of ASKI_type_inversion_grid = 3, ASKI output is stored at all inner GLL points of elements
+#      which are inside the volume defined by ASKI_nchunk, ASKI_(cw)(latlon), ASKI_r(minmax).
+#      ASKI locates the wavefield points inside the inversion grid and computes integration weights
+#
+#   ASKI_type_inversion_grid = 4, (TYPE_INVERSION_GRID = specfem3dInversionGrid)
+#      use SPECFEM elements as inversion grid:
+#      wavefield points are ALL GLL points of an element for elements which are (at least partly) inside the 
+#      volume defined by ASKI_nchunk, ASKI_(cw)(latlon), ASKI_r(minmax)
+#      additionally store the jacobians for all wavefield points
+#      assume ncell = ntot_wp/(NGLLX*NGLLY*NGLLY) as the number of inversion grid cells, and the order of 
+#      wavefield points accordingly (do k=1,NGLLZ; do j=1,NGLLY; do i=1,NGLLX; ip=ip+1 ....)
+#
+#   ASKI_type_inversion_grid = 5, (TYPE_INVERSION_GRID = chunksInversionGrid)
+#      ASKI internal, but SPECFEM independent more elaborate spherical inverison grid supporting several chunks
+#
+# The following parameters may be used to define a spherical volume within which wavefield points are searched for:
+#
+# ASKI_nchunk defines the number of chunks of a chunk cubed sphere. 
+# SPECFEM3D_GLOBE for ASKI supports 1,2,3 and 6 chunks (like the forward code itself)
+# However, not all those values are supported by all types of inversion grids: 
+#   the schunkInversionGrid only supports ASKI_nchunk = 1
+#   the ecartInversionGrid,specfem3dInversionGrid and chunksInversionGrid support all values 1,2,3,6
+#
+# ASKI_clat,ASKI_clon define the center of the first chunks (not used for full sphere with 6 chunks)
+# ASKI_wlat,ASKI_wlon define the width of the chunk, if ASKI_nchunk = 1. For nchunk = 2,3,6 always wlon=wlat=90.0 is used
+# ASKI_rot_gamma defines the azimuthal rotation angle in degrees by which the 1,2 or 3 chunks are rotated (anti-clockwise) about the local vertical axis through the center of the first chunk. Not used for ASKI_nchunk = 6
+#------------------------------------------------------------------------------------
+
+
+# type of inversion grid, in order to produce correct output
+
+  ASKI_type_inversion_grid = 1
+
+
+# number of chunks of a chunk cubed sphere (supported values: 1,2,3,6)
+
+  ASKI_nchunk = 1
+
+
+# lateral width of ASKI output in degrees, used only for 1 chunk 
+# (for 2,3,6 chunks always 90.0 used and wlat,wlon are ignored!)
+
+  ASKI_wlat = 90.0
+  ASKI_wlon = 90.0
+
+
+# azimuthal rotation angle in degrees about the vertical through center of first chunk (only used for 1,2,3 chunks)
+
+  ASKI_rot_gamma = 0.0
+
+
+# center of first (or only) ASKI output chunk in geographical coordinates (deg), i.e.
+# -90.0 <= clat <= 90.0 and -360 <= clon <= 360 
+# (only used for 1,2,3 chunks, in case of 6 chunks these values are ignored, no centering is done then)
+
+  ASKI_clat = 0.0
+  ASKI_clon = 0.0
+
+
+# global depht distribution of ASKI output volume, defined by maximum radius and minimum radius in km 
+# (used for all numbers of chunks, requires rmax > rmin)
+
+  ASKI_rmax = 6371.0
+  ASKI_rmin = 6271.0
