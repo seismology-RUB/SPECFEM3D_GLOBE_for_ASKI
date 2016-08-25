@@ -2,26 +2,23 @@
 #
 #!/usr/bin/env /usr/bin/python
 #
-# the following unfortunately does not work on our grid engine! so use path.append("/home/florian/programme/include") (below) (same for programme/ASKI)
-#!/usr/bin/env PYTHONPATH=/home/florian/programme/include /home/florian/programme/ASKI /usr/bin/python
-#
 #----------------------------------------------------------------------------
 #   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 #
-#   This file is part of ASKI version 1.0.
+#   This file is part of ASKI version 1.2.
 #
-#   ASKI version 1.0 is free software: you can redistribute it and/or modify
+#   ASKI version 1.2 is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
 #   the Free Software Foundation, either version 2 of the License, or
 #   (at your option) any later version.
 #
-#   ASKI version 1.0 is distributed in the hope that it will be useful,
+#   ASKI version 1.2 is distributed in the hope that it will be useful,
 #   but WITHOUT ANY WARRANTY; without even the implied warranty of
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #   GNU General Public License for more details.
 #
 #   You should have received a copy of the GNU General Public License
-#   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+#   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
 #----------------------------------------------------------------------------
 #
 # import python modules
@@ -199,11 +196,15 @@ class simulation:
             self.nproc = int(nproc_list[0])
 
         # open main parfile and check if all required keywords are present
+        if not os_path.exists(main_parfile):
+            self.log("### STOP : file '"+main_parfile+"' as set for the main parameter file does not exist, "+
+                     "please correct the definition of 'main_parfile = ...' at the beginning of this script\n\n")
+            raise Exception("main parameter file does not exist; see logfile '"+logfile+"'")
         try:
             self.mparam = inputParameter(main_parfile)
         except:
             self.log("### STOP : could not create inputParameter object for main parameter file '"+
-                     main_parfile+"'\n\n")
+                     main_parfile+"', make sure that the file is of correct form\n\n")
             raise
         # check if all required keys are set
         noKeys = self.mparam.keysNotPresent(['MAIN_PATH_INVERSION','CURRENT_ITERATION_STEP','ITERATION_STEP_PATH',
@@ -221,11 +222,17 @@ class simulation:
 
         # open iteration step parfile and check if all required keywords are present
         iter_parfile = os_path.join(self.iter_path,self.mparam.sval('PARFILE_ITERATION_STEP'))
+        if not os_path.exists(iter_parfile):
+            self.log("### STOP : the iteration step parameter file '"+iter_parfile+"' as derived from the main "+
+                     "parameter file does not exist, please make sure that the settings of MAIN_PATH_INVERSION, "+
+                     "CURRENT_ITERATION_STEP, ITERATION_STEP_PATH and PARFILE_ITERATION_STEP in main parameter file '"+
+                     main_parfile+"' is correctly set\n\n")
+            raise Exception("iteration step parameter file does not exist; see logfile '"+logfile+"'")
         try:
             self.iparam = inputParameter(iter_parfile)
         except:
             self.log("### STOP : could not create inputParameter object for the iteration step parameter file '"+
-                     iter_parfile+"'\n\n")
+                     iter_parfile+"', make sure that the file is of correct form\n\n")
             raise
         # check if all required keys are set
         noKeys = self.iparam.keysNotPresent(['ITERATION_STEP_NUMBER_OF_FREQ','ITERATION_STEP_INDEX_OF_FREQ',
@@ -450,10 +457,15 @@ class simulation:
 
         # read event list and station list
         if displ_simulations != '' or measured_data_simulations != '':
+            if not os_path.exists(self.mparam.sval('FILE_EVENT_LIST')):
+                self.log("### STOP : the event list file '"+self.mparam.sval('FILE_EVENT_LIST')+"' as set in the "+
+                         "main parameter file '"+main_parfile+"' does not exist\n\n")
+                raise Exception("event list file does not exist; see logfile '"+logfile+"'")
             try:
                 self.evlist = eventList(self.mparam.sval('FILE_EVENT_LIST'),list_type='standard')
             except:
-                self.log("### STOP : could not read event list from file '"+self.mparam.sval('FILE_EVENT_LIST')+"'\n\n")
+                self.log("### STOP : could not construct event list from file '"+self.mparam.sval('FILE_EVENT_LIST')+
+                         "', make sure that the file is of correct form\n\n")
                 raise
             if self.evlist.nev == 0:
                 self.log("### STOP : event list from file '"+self.mparam.sval('FILE_EVENT_LIST')+"' does not contain"+
@@ -464,10 +476,15 @@ class simulation:
                          self.evlist.csys+"', only 'S' supported here\n\n")
                 raise Exception("coordinate system of event list file not supported; see logfile '"+logfile+"'")
             if create_specfem_stations:
+                if not os_path.exists(self.mparam.sval('FILE_STATION_LIST')):
+                    self.log("### STOP : the station list file '"+self.mparam.sval('FILE_STATION_LIST')+"' as set "+
+                             "in the main parameter file '"+main_parfile+"' does not exist\n\n")
+                    raise Exception("station list file does not exist; see logfile '"+logfile+"'")
                 try:
                     self.statlist = stationList(self.mparam.sval('FILE_STATION_LIST'),list_type='standard')
                 except:
-                    self.log("### STOP : could not read station list from file '"+self.mparam.sval('FILE_STATION_LIST')+"'\n\n")
+                    self.log("### STOP : could not construct station list from file '"+self.mparam.sval('FILE_STATION_LIST')+
+                             "', make sure that the file is of correct form\n\n")
                     raise
                 if self.statlist.nstat == 0:
                     self.log("### STOP : station list from file '"+self.mparam.sval('FILE_STATION_LIST')+"' does not contain"+
@@ -478,10 +495,15 @@ class simulation:
                              self.statlist.csys+"', only 'S' supported here\n\n")
                     raise Exception("coordinate system of station list file not supported; see logfile '"+logfile+"'")
         if gt_simulations != '' and not hasattr(self,'statlist'):
+            if not os_path.exists(self.mparam.sval('FILE_STATION_LIST')):
+                self.log("### STOP : the station list file '"+self.mparam.sval('FILE_STATION_LIST')+"' as set "+
+                         "in the main parameter file '"+main_parfile+"' does not exist\n\n")
+                raise Exception("station list file does not exist; see logfile '"+logfile+"'")
             try:
                 self.statlist = stationList(self.mparam.sval('FILE_STATION_LIST'),list_type='standard')
             except:
-                self.log("### STOP : could not read station list from file '"+self.mparam.sval('FILE_STATION_LIST')+"'\n\n")
+                self.log("### STOP : could not construct station list from file '"+self.mparam.sval('FILE_STATION_LIST')+
+                         "', make sure that the file is of correct form\n\n")
                 raise
             if self.statlist.nstat == 0:
                 self.log("### STOP : station list from file '"+self.mparam.sval('FILE_STATION_LIST')+"' does not contain"+
@@ -1364,9 +1386,3 @@ def main():
 #
 if __name__ == "__main__":
     main()
-#
-#-----------------------------------------------------------
-# qsub -l low -cwd -hard -q "low.q@minos18,low.q@minos19,low.q@minos20,low.q@minos21,low.q@minos22,low.q@minos23,low.q@minos24,low.q@minos25,low.q@minos26,low.q@minos27" -pe mpi-fu 108 run_specfem3dGlobeForASKI_simulations.py
-#
-# qsub -l low -cwd -hard -q "low.q@minos26,low.q@minos27" -masterq "low.q@minos27" -pe mpi-fu 96 run_specfem3dGlobeForASKI_simulations.py
-#-----------------------------------------------------------

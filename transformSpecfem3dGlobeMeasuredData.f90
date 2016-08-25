@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
 !   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.2.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.2 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.2 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 program transformSpecfem3dGlobeMeasuredData
   use specfem3dForASKI_mod
@@ -25,6 +25,7 @@ program transformSpecfem3dGlobeMeasuredData
   use seismicNetwork
   use discreteFourierTransform
   use componentTransformation
+  use complexKernelFrequency
   use asciiDataIO
   use argumentParser
   use string
@@ -36,7 +37,7 @@ program transformSpecfem3dGlobeMeasuredData
 
   ! command line
   type (argument_parser) :: ap
-  character(len=max_length_string) :: parfile,str
+  character(len=max_length_string) :: parfile,str,forward_method_consistent_with_data
   character(len=max_length_string), dimension(:), pointer :: str_vec
 
   ! basics
@@ -79,7 +80,7 @@ program transformSpecfem3dGlobeMeasuredData
   ! other stuff
   integer :: istat,lu
   logical :: one_event_only,deconvolve_stf,print_usage_and_stop,&
-       diff_time_series,scale_time_series,use_imag_freq_gemini
+       diff_time_series,scale_time_series,use_complex_freq
   real :: ts_scale_factor
   type (seismic_event) :: event
   character(len=character_length_evid) :: evid,evid_one_event_only
@@ -87,12 +88,16 @@ program transformSpecfem3dGlobeMeasuredData
   character(len=400) :: path_specfem_seismograms,path_measured_data,file_measured_data
   double complex :: two_pi_i
 
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  PROGRAM STARTS HERE
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  nullify(str_vec,trans_coef,traces,stf,jf,event_filter,station_comp_filter)
+
 !------------------------------------------------------------------------
 !  preliminary processing
 !
-  nullify(str_vec,trans_coef,traces,stf,jf,event_filter,station_comp_filter)
-!
-  call init(ap,myname,"Transform standard SPECFEM3D output to ASKI spectral data in measured-data format")
+  call init(ap,myname,"Transform standard SPECFEM3D GLOBE 7.0.0 output to ASKI 1.0-1.2 spectral data in measured-data format")
   call addPosarg(ap,"main_parfile","sval","Main parameter file of inversion")
   call addOption(ap,"-bicode",.true.,"(mandatory) bandcode and instrument code: the first two characters before "//&
        "the component in seismogram filename, e.g. 'LH' if your filenames look like 'network.staname.LH*.semd'",&
@@ -105,9 +110,9 @@ program transformSpecfem3dGlobeMeasuredData
        "filters (as defined in main parfile) will be applied to the spectra")
   call addOption(ap,'-evid',.true.,"(optional) indicates a single event for which measured data is produced, "//&
        "otherwise measured data is produced for all events (as defined in ASKI FILE_EVENT_LIST)",'sval','')
-  call addOption(ap,"-gemini",.false.,"(optional) use to produce GEMINI consistent data: COMPLEX valued "//&
-       "frequencies  f = jf*df + i*sigma  with real part jf*df and constant (!) imaginary part sigma = -5*df/2pi "//&
-       "are used for DFT (filter values are assumed to be at those frequencies)")
+  call addOption(ap,"-cfreq",.true.,"(optional) use complex frequencies producing data consistent with the given "//&
+       "forward code (e.g. giving 'GEMINI' here, will produce Gemini-consistent spectral data at complex frequencies). "//&
+       "Any filter values are also assumed to be given at those frequencies!","sval","")
   call addOption(ap,"-dconv",.false.,"(optional) if set, the source time function will be deconvolved from "//&
        "SPECFEM seismograms; consistend with 'ASKI_DECONVOLVE_STF = .true.' in Par_file_ASKI")
   call addOption(ap,"-diffts",.false.,"(optional) if set, additionally the time series will be differentiated "//&
@@ -186,7 +191,7 @@ program transformSpecfem3dGlobeMeasuredData
   end if
 !
   ! -dconv
-  deconvolve_stf = (ap.optset."-dconv") !! FS FS CONTINUE: implement the same functionality as in transformSpecfem3dGlobeSyntheticData ?! ASSUME KNOWLEDGE ABOUT FILE EXTENSIONS AND FORM OF SOURCE TIME FUNCTION
+  deconvolve_stf = (ap.optset."-dconv")
 !
   ! -diffts
   diff_time_series = (ap.optset."-diffts")
@@ -202,8 +207,11 @@ program transformSpecfem3dGlobeMeasuredData
      end if
   end if ! scale_time_series
 !
-  ! -gemini
-  use_imag_freq_gemini = (ap.optset."-gemini")
+  ! -cfreq
+  use_complex_freq = (ap.optset."-cfreq")
+  if(use_complex_freq) then
+     forward_method_consistent_with_data = ap.sval."-cfreq"
+  end if
 !
   print_usage_and_stop = print_usage_and_stop .or. .level.(.errmsg.ap) == 2
 !
@@ -285,8 +293,12 @@ program transformSpecfem3dGlobeMeasuredData
   if(apply_filter) allocate(filter(nfreq))
   allocate(f(nfreq))
   call new(errmsg,myname)
-  if(use_imag_freq_gemini) then
-     f = cmplx(jf*df)+mc_ci*cmplx(-5.*df/mc_two_pi)
+  if(use_complex_freq) then
+     do ifreq = 1,nfreq
+        ! get the frequency by module complexKernelFrequency (will return correct real-valued 
+        ! frequency in complex variable if the forward method has no complex frequencies)
+        f(ifreq) = getComplexKernelFrequency(forward_method_consistent_with_data,df,jf(ifreq))
+     end do ! ifreq
      call initiateForwardDFT(DFT,DT,0,NSTEP-1,f,errmsg,hanning_taper=0.05)
   else
      f = jf*df
@@ -323,10 +335,20 @@ program transformSpecfem3dGlobeMeasuredData
   write(*,*) "   number of frequencies = ",nfreq
   write(*,*) "   frequency step df = ",df
   write(*,*) "   frequency indices jf = ",jf
-  if(use_imag_freq_gemini) then
-     write(*,*) "   assuming gemini-like complex frequencies   f = jf*df - i*5*df/2pi = ",f
+  if(use_complex_freq) then
+     if(methodHasComplexKernelFrequency(forward_method_consistent_with_data)) then
+        write(*,*) "   assuming complex frequencies consistent with forward method '",&
+             trim(forward_method_consistent_with_data),&
+             "', for which this frequency discretization corresponds to frequencies [Hz]:"
+        write(*,*) "   ",f
+     else ! methodHasComplexKernelFrequency
+        write(*,*) "   WARNING: even though requested by flag -cfreq, method '",trim(forward_method_consistent_with_data),&
+             "' does not use complex frequencies (or is unknown): assuming real-valued frequencies f = jf*df [Hz]:"
+        write(*,*) "   ",real(f)
+     end if ! methodHasComplexKernelFrequency
   else
-     write(*,*) "   assuming real-valued frequencies f = jf*df = ",real(f)
+     write(*,*) "   assuming real-valued frequencies f = jf*df [Hz]:"
+     write(*,*) "   ",real(f)
   end if
   if(scale_time_series) then
      write(*,*) "   time series will be scaled by factor ",ts_scale_factor," before further processing"
@@ -551,86 +573,3 @@ program transformSpecfem3dGlobeMeasuredData
   call usage(ap)
   goto 1
 end program transformSpecfem3dGlobeMeasuredData
-!
-!------------------------------------------------------------------------
-!
-! subroutine printhelp
-!   use componentTransformation, only: all_valid_components
-!   print '(50(1h-))'
-!   print *,'Usage:'
-!   print *,''
-!   print *,'  transformSpecfem3dGlobeMeasuredData [-h] -bicode band_instrument_code -ori orientation -ext file_extension'
-!   print *,'     -dt time_step -nstep number_of_time_samples -ocomp "ncomp comp" [-filter] [-evid eventID] [-gemini]'
-!   print *,'    [-dconvd] [-uf unit_factor] [-diffts] [-scale ts_scale_factor] [-bin] parfile'
-!   print *,''
-!   print *,'Arguments:'
-!   print *,''
-!   print *,"  parfile: main parameter file of inversion"
-!   print *,''
-!   print *,'Mandatory options:'
-!   print *,''
-!   print *,'  -bicode band_instrument_code : band_instrument_code must be two characters, band code and instrument code'
-!   print *,'                                 i.e. the first two characters before the component in seismogram filename'
-!   print *,"                                 e.g. 'LH' if your filenames look like 'staname.network.LH*.semd.ascii'"
-!   print *,''
-!   print *,"  -ori orientation : either 'NEZ' or 'XYZ', indicating the component orientations following band_instrument_code"
-!   print *,''
-!   print *,'  -ext file_extension : file_extension should be ANYTHING following the orientation character (including ALL dots etc.)'
-!   print *,"                                 e.g. if your filenames look like 'staname.network.FX*.semv', file_extension = '.semv'"
-!   print *,''
-!   print *,"  -dt time_step : time_step is the real number defining the time step of the seismograms (as in SPECFEM3D Par_file)"
-!   print *,''
-!   print *,"  -nstep number_of_time_samples : number_of_time_samples is the number of samples NSTEP as in SPECFEM3D Par_file"
-!   print *,''
-!   print *,"  -ocomp : defines the components for which measured data output is produced"
-!   print *,"          ncomp: number of components,  comp: ncomp components (valid components: '"//&
-!        trim(all_valid_components)//"')"
-!   print *,''
-!   print *,'Optional options:'
-!   print *,''
-!   print *,'  -filter : if set, the respective event filters and station (component) filters will be applied to the spectra'
-!   print *,''
-!   print *,'  -evid eventID : if set, eventID indicates the single event for which measured data is produced. otherwise,'
-!   print *,'                  measured data is produced for all events (as defined in ASKI FILE_EVENT_LIST)'
-!   print *,''
-!   print *,'  -gemini : if set, COMPLEX valued frequencies  f = jf*df + i*sigma  with usual real part jf*df and'
-!   print *,'            constant (!) imaginary part sigma = -5*df/2pi are used for the discrete Fourier transform of the SPECFEM3D'
-!   print *,'            output seismograms and the filters are also assumed to be given at those frequencies, etc. Use this flag'
-!   print *,'            when producing synthetically compputed data for inversion with GEMINI, which computes spectral synthetics'
-!   print *,'            and kernels at those kind of complex frequencies.'
-!   print *,''
-!   print *,'  -dconvd : if set, the derivative of the heaviside source time function will be deconvolved from the seismograms.'
-!   print *,"            It is assumed that it was written to file 'plot_source_time_function.txt', i.e. flag"
-!   print *,'            PRINT_SOURCE_TIME_FUNCTION was set to .true. in SPECFEM3D Par_file. '
-!   print *,"            -dconvd is consistend with 'ASKI_DECONVOLVE_STF = .true.' in Par_file_ASKI. In case ASKI_DECONVOLVE_STF"
-!   print *,"            was .true. , flag -dconvd should be set, too!! In this case, velocity seismograms (i.e. extensions '.semv')"
-!   print *,"            must be used!"
-!   print *,"            The content of file 'plot_source_time_function.txt' is NORMALIZED to maximum value 1 (relevant for use "//&
-!        "with SPECFEM3D GLOBE)"
-!   print *,''
-!   print *,"  -uf unit_factor : if set, displacement spectra are produced in the unit according to value unit_factor > 0."
-!  print *,"                    Here, the very same value should be set as UNIT_FACTOR_MEASURED_DATA in the ASKI main parameter file!"
-!   print *,"                    The unit factor in ASKI is defined as follows: Multiplication by value unit_factor has the effect to"
-!   print *,"                    transform the resulting output spectra to SI units [ms]. In particular, output spectra in [ms] "
-!   print *,"                    correspond to unit_factor = 1.0."
-!   print *,"                    BY DEFAULT, unit_factor = 1.0 (no need to set -uf if you want to produce spectra in [ms])."
-!   print *,"                    For example: inverting time-domain displacement data given in the unit of nano meters, unit_factor"
-!   print *,"                    should be set to the value of 1.0e-9 here (and in the ASKI main parfile), since nano meters times"
-!   print *,"                    1.0e-9 gives the SI unit meters."
-!   print *,""
-!   print *,'  -diffts : If set, the time series will be differentiated (by simple first order central differences) before '//&
-!        'further processing.'
-!   print *,'            This option is sensible to set when processing displacement seismograms which were calculated w.r.t. a '//&
-!        'Heaviside stf'
-!   print *,'            (e.g. SPECFEM3D GLOBE). Using additionally option -dconvd, this then results in displacement spectra '//&
-!        'w.r.t. a dirac impulse stf'
-!   print *,''
-!   print *,'  -scale ts_scale_factor : if set, the time series are scaled with factor ts_scale_factor before further processing'
-!   print *,''
-!   print *,'  -bin : indicates whether SPECFEM trace files are binary files or not. for ascii output simply do not set '//&
-!        'option -bin'
-!   print *,''
-!   print *,'  -h : print this help message'
-!   print '(50(1h-))'
-!   return
-! end subroutine printhelp

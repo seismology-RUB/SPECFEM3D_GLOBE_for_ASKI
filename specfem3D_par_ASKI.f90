@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
 !   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of SPECFEM3D_GLOBE version 7.0.0 and ASKI version 1.0.
+!   This file is part of SPECFEM3D_GLOBE version 7.0.0 and ASKI version 1.2.
 !
-!   SPECFEM3D_GLOBE version 7.0.0 and ASKI version 1.0 are free software: 
+!   SPECFEM3D_GLOBE version 7.0.0 and ASKI version 1.2 are free software: 
 !   you can redistribute it and/or modify it under the terms of the GNU 
 !   General Public License as published by the Free Software Foundation, 
 !   either version 2 of the License, or (at your option) any later version.
 !
-!   SPECFEM3D_GLOBE version 7.0.0 and ASKI version 1.0 are distributed in 
+!   SPECFEM3D_GLOBE version 7.0.0 and ASKI version 1.2 are distributed in 
 !   the hope that they will be useful, but WITHOUT ANY WARRANTY; without 
 !   even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
 !   PURPOSE.  See the GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with SPECFEM3D_GLOBE version 7.0.0 and ASKI version 1.0.
+!   along with SPECFEM3D_GLOBE version 7.0.0 and ASKI version 1.2.
 !   If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 
@@ -51,7 +51,7 @@
   module specfem_for_ASKI_par
 !
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! THE CONTENT OF THIS MODULE IS A MODIFIED COPY OF FILES
+! THE CONTENT OF THIS MODULE ORIGINATES FROM FILES
 ! specfem3D_par_ASKI.f90, specfem3D_for_ASKI.f90 
 ! FROM 
 !    SPECFEM3D_Cartesian version 2.1 for ASKI 0.3

@@ -1,20 +1,20 @@
 !----------------------------------------------------------------------------
 !   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.2.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.2 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.2 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 program transformSpecfem3dGlobeSyntheticData
   use specfem3dForASKI_mod
@@ -81,12 +81,16 @@ program transformSpecfem3dGlobeSyntheticData
   character(len=400) :: path_specfem_seismograms,path_synthetic_data,file_synthetic_data
   double complex :: two_pi_i
 
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  PROGRAM STARTS HERE
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   nullify(str_vec,trans_coef,traces,stf,jf)
 
 !------------------------------------------------------------------------
 !  preliminary processing
 !
-  call init(ap,myname,"Transform standard SPECFEM3D GLOBE 7.0.0 output to ASKI 1.0 spectral data in synthetic-data format")
+  call init(ap,myname,"Transform standard SPECFEM3D GLOBE 7.0.0 output to ASKI 1.0-1.2 spectral data in synthetic-data format")
   call addPosarg(ap,"main_parfile","sval","Main parameter file of inversion")
   call addOption(ap,"-bicode",.true.,"(mandatory) bandcode and instrument code: the first two characters before "//&
        "the component in seismogram filename, e.g. 'LH' if your filenames look like 'network.staname.LH*.sem'",&
@@ -426,63 +430,3 @@ program transformSpecfem3dGlobeSyntheticData
   call usage(ap)
   goto 1
 end program transformSpecfem3dGlobeSyntheticData
-!
-!------------------------------------------------------------------------
-!
-! subroutine printhelp
-!   use componentTransformation, only: all_valid_components
-!   print '(50(1h-))'
-!   print *,'Usage:'
-!   print *,''
-!   print *,'  transformSpecfem3dGlobeSyntheticData [-h] -bicode band_instrument_code -dt time_step'
-!   print *,'     -nstep number_of_time_samples -ocomp "ncomp comp" [-evid eventID] [-dconv] [-uf unit_factor] parfile'
-!   print *,''
-!   print *,'REMARKS: It is assumed that seismograms were written as NEZ, and not as ZRT (i.e. ROTATE_SEISMOGRAMS_RT = .false.)'
-!   print *,'         It is assumed that text files were written, one file per seismogram '
-!   print *,'            (i.e. OUTPUT_SEISMOS_ASCII_TEXT = .true. , SAVE_ALL_SEISMOS_IN_ONE_FILE = .false. , '//&
-!        'USE_BINARY_FOR_LARGE_FILE = .false.'
-!   print *,''
-!   print *,'Arguments:'
-!   print *,''
-!   print *,"  parfile: main parameter file of inversion"
-!   print *,''
-!   print *,'Mandatory options:'
-!   print *,''
-!   print *,'  -bicode band_instrument_code : band_instrument_code must be two characters, band code and instrument code'
-!   print *,'                                 i.e. the first two characters before the component in seismogram filename'
-!   print *,"                                 e.g. 'LH' if your filenames look like 'network.staname.LH*"//&
-!        trim(seisfile_extension)//"'"
-!   print *,''
-!   print *,"  -dt time_step : time_step is the real number defining the time step of the seismograms (as in SPECFEM3D Par_file)"
-!   print *,''
-!   print *,"  -nstep number_of_time_samples : number_of_time_samples is the number of samples NSTEP as in SPECFEM3D Par_file"
-!   print *,''
-!   print *,"  -ocomp : defines the receiver components for which synthetic data output is produced."
-!   print *,"           ncomp: number of components,  comp: ncomp components (valid components: '"//&
-!        trim(all_valid_components)//"')"
-!   print *,''
-!   print *,'Optional options:'
-!   print *,''
-!   print *,'  -evid eventID : if set, eventID indicates the single event for which synthetic data is produced. otherwise,'
-!   print *,'                  synthetic data is produced for all events (as defined in ASKI FILE_EVENT_LIST)'
-!   print *,''
-!   print *,'  -dconv : if set, the normalized and differentiated source time function will be deconvolved from the differentiated'
-!   print *,"           synthetics. It is assumed that the source time function (error function) was written to file"
-!  print *,"           'plot_source_time_function.txt', i.e. flag PRINT_SOURCE_TIME_FUNCTION was set to .true. in SPECFEM3D Par_file."
-!   print *,"           (-dconv is consistend with 'ASKI_DECONVOLVE_STF = .true.' in Par_file_ASKI). In case"
-!   print *,"           ASKI_DECONVOLVE_STF was .true. , here flag -dconv should be set for consistency!"
-!   print *,''
-!   print *,"  -uf unit_factor : if set, displacement spectra are produced in the unit according to value unit_factor > 0."
-!  print *,"                    Here, the very same value should be set as UNIT_FACTOR_MEASURED_DATA in the ASKI main parameter file!"
-!   print *,"                    The unit factor in ASKI is defined as follows: Multiplication by value unit_factor has the effect to"
-!   print *,"                    transform the resulting output spectra to SI units [ms]. In particular, output spectra in [ms] "
-!   print *,"                    correspond to unit_factor = 1.0."
-!   print *,"                    BY DEFAULT, unit_factor = 1.0 (no need to set -uf if you want to produce spectra in [ms])."
-!   print *,"                    For example: inverting time-domain displacement data given in the unit of nano meters, unit_factor"
-!   print *,"                    should be set to the value of 1.0e-9 here (and in the ASKI main parfile), since nano meters times"
-!   print *,"                    1.0e-9 gives the SI unit meters."
-!   print *,""
-!   print *,'  -h : print this help message'
-!   print '(50(1h-))'
-!   return
-! end subroutine printhelp

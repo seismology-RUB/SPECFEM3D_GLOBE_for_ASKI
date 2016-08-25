@@ -1,0 +1,140 @@
+this is log run_specfem3dGlobeForASKI_simulations.log
+starting script -- Thu Feb 11 15:48:50 2016
+
+################################################################################
+Welcome to these automated SPECFEM3D_GLOBE simulations for ASKI
+
+
+main ASKI parameter file: '/home/florian/inversion/ASKI_example_spherical_small/main_parfile'
+iteration step 1
+iteration step specific parameter file: '/home/florian/inversion/ASKI_example_spherical_small/iteration_step_001/iter_parfile'
+'./run_mesher_solver.bash' tells me, we're using 4 procs
+OUTPUT_FILES_PATH = 'OUTPUT_FILES/'
+LOCAL_PATH = 'DATABASES_MPI/'
+DATA_FILES_PATH = 'DATA/'
+
+according to the simulation strings 
+  displ_simulations = '200801060514A'
+  gt_simulations = 'specific'
+  gt_components = 'ZKR:UP,N'
+  measured_data_simulations = '',
+now the following 3 simulations are done (in this order): 
+
+(TYPE ID[_component])
+(displ 200801060514A),  (gt ZKR_UP),  (gt ZKR_N)
+
+already in advance, all 1 Green tensor component files (containing the Green tensor components for each station) were written to paths '/home/florian/inversion/ASKI_example_spherical_small/iteration_step_001/kernel_green_tensors/kernel_gt_staname.comp'
+
+this log will not be sent via email anywhere
+
+for every simulation of type displ or gt, the ASKI output volume in Par_file_ASKI
+will be defined by the following values:
+  ASKI_type_inversion_grid = 5 (meaning 'chunksInversionGrid')
+  ASKI_nchunk = 1
+  ASKI_wlat = 12.0
+  ASKI_wlon = 12.0
+  ASKI_rot_gamma = -10.0
+  ASKI_clat = 38.5
+  ASKI_clon = 25.0
+  ASKI_rmax = 6371.0
+  ASKI_rmin = 6179.0
+
+starting simulations now at time -- Thu Feb 11 15:48:50 2016
+
+################################################################################
+Thu Feb 11 15:48:50 2016 -- now doing the 1-th simulation out of 3
+TYPE 'displ', ID '200801060514A'
+
+set SPECFEM3D_GLOBE parameter files for this simulation now
+   in setSpecfemGlobeParameters:
+      this is event evid = 200801060514A
+      source lat , lon , depth = 36.98, 22.87, 92.39
+      source type = 1
+      moment tensor in Nm =  7.740000e+17  -1.83e+18  1.06e+18  1.29e+18  -8.45e+17  -4.43e+17 (read from ASKI event list file)
+      moment tensor in dyn*cm =  7.74e+24  -1.83e+25  1.06e+25  1.29e+25  -8.45e+24  -4.43e+24 (write to SPECFEM CMTSOLUTION file)
+      nf,df = 4, 0.005
+      frequency indices = 3 4 5 6
+      kernel displacement output file (basename) = '/home/florian/inversion/ASKI_example_spherical_small/iteration_step_001/kernel_displacements/kernel_displ_200801060514A'
+      the SPECFEM STATIONS file was created from the 3 stations in ASKI's station list file, setting any altitudes to '0.0'
+      SPECFEM3D_GLOBE OUTPUT_FILES will be copied to '/home/florian/inversion/ASKI_example_spherical_small/iteration_step_001/kernel_displacements/kernel_displ_200801060514A_OUTPUT_FILES'.
+done
+
+run command './run_mesher_solver.bash' now via system call
+done
+
+copy SPECFEM3D_GLOBE OUTPUT_FILES
+   in copySpecfemGlobeOutput: calling "os_mkdir('/home/florian/inversion/ASKI_example_spherical_small/iteration_step_001/kernel_displacements/kernel_displ_200801060514A_OUTPUT_FILES')"
+   in copySpecfemGlobeOutput: calling "os_system('cp OUTPUT_FILES/* /home/florian/inversion/ASKI_example_spherical_small/iteration_step_001/kernel_displacements/kernel_displ_200801060514A_OUTPUT_FILES')"
+done
+
+current time -- Thu Feb 11 15:56:15 2016
+elapsed time for this simulation (h:min:sec) -- 0 : 7 : 25
+current mean elapsed time per simulation after 1 simulations (h:min:sec) -- 0 : 7 : 25
+assuming all remaining 2 simulations to last the same time, script will finish presumably -- Thu Feb 11 16:11:06 2016
+
+
+################################################################################
+Thu Feb 11 15:56:15 2016 -- now doing the 2-th simulation out of 3
+TYPE 'gt', ID 'ZKR_UP'
+
+set SPECFEM3D_GLOBE parameter files for this simulation now
+   in setSpecfemGlobeParameters:
+      this is station staname,nwname = ZKR, GE
+      lat , lon , alt = 35.11470, 26.21700, 270.0
+      green tensor component = UP
+      nf,df = 4, 0.005
+      frequency indices = 3 4 5 6
+      kernel green tensor output file (basename) = '/home/florian/inversion/ASKI_example_spherical_small/iteration_step_001/kernel_green_tensors/kernel_gt_ZKR_UP'
+      the SPECFEM STATIONS file was created from the 3 stations in ASKI's station list file, setting any altitudes to '0.0'
+      SPECFEM3D_GLOBE OUTPUT_FILES will be copied to '/home/florian/inversion/ASKI_example_spherical_small/iteration_step_001/kernel_green_tensors/kernel_gt_ZKR_UP_OUTPUT_FILES'.
+      any possible altitude of this station is ignored for setting the source depth! always depth = 0 is used for Green functions
+done
+
+run command './run_solver_only.bash' now via system call
+done
+
+copy SPECFEM3D_GLOBE OUTPUT_FILES
+   in copySpecfemGlobeOutput: calling "os_mkdir('/home/florian/inversion/ASKI_example_spherical_small/iteration_step_001/kernel_green_tensors/kernel_gt_ZKR_UP_OUTPUT_FILES')"
+   in copySpecfemGlobeOutput: calling "os_system('cp OUTPUT_FILES/* /home/florian/inversion/ASKI_example_spherical_small/iteration_step_001/kernel_green_tensors/kernel_gt_ZKR_UP_OUTPUT_FILES')"
+done
+
+current time -- Thu Feb 11 16:03:20 2016
+elapsed time for this simulation (h:min:sec) -- 0 : 7 : 4
+current mean elapsed time per simulation after 2 simulations (h:min:sec) -- 0 : 7 : 14
+assuming all remaining 1 simulations to last the same time, script will finish presumably -- Thu Feb 11 16:10:34 2016
+
+
+################################################################################
+Thu Feb 11 16:03:20 2016 -- now doing the 3-th simulation out of 3
+TYPE 'gt', ID 'ZKR_N'
+
+set SPECFEM3D_GLOBE parameter files for this simulation now
+   in setSpecfemGlobeParameters:
+      this is station staname,nwname = ZKR, GE
+      lat , lon , alt = 35.11470, 26.21700, 270.0
+      green tensor component = N
+      nf,df = 4, 0.005
+      frequency indices = 3 4 5 6
+      kernel green tensor output file (basename) = '/home/florian/inversion/ASKI_example_spherical_small/iteration_step_001/kernel_green_tensors/kernel_gt_ZKR_N'
+      the SPECFEM STATIONS file was created from the 3 stations in ASKI's station list file, setting any altitudes to '0.0'
+      SPECFEM3D_GLOBE OUTPUT_FILES will be copied to '/home/florian/inversion/ASKI_example_spherical_small/iteration_step_001/kernel_green_tensors/kernel_gt_ZKR_N_OUTPUT_FILES'.
+      any possible altitude of this station is ignored for setting the source depth! always depth = 0 is used for Green functions
+done
+
+run command './run_solver_only.bash' now via system call
+done
+
+copy SPECFEM3D_GLOBE OUTPUT_FILES
+   in copySpecfemGlobeOutput: calling "os_mkdir('/home/florian/inversion/ASKI_example_spherical_small/iteration_step_001/kernel_green_tensors/kernel_gt_ZKR_N_OUTPUT_FILES')"
+   in copySpecfemGlobeOutput: calling "os_system('cp OUTPUT_FILES/* /home/florian/inversion/ASKI_example_spherical_small/iteration_step_001/kernel_green_tensors/kernel_gt_ZKR_N_OUTPUT_FILES')"
+done
+
+current time -- Thu Feb 11 16:10:32 2016
+elapsed time for this simulation (h:min:sec) -- 0 : 7 : 12
+current mean elapsed time per simulation after 3 simulations (h:min:sec) -- 0 : 7 : 13
+assuming all remaining 0 simulations to last the same time, script will finish presumably -- Thu Feb 11 16:10:32 2016
+
+
+
+--Thu Feb 11 16:10:32 2016-- exiting script now. Good Bye
+

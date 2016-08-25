@@ -1,0 +1,37 @@
+THIS IS A MODIFIED COPY OF SPECFEM3D_GLOBE version 7.0.0 [2015-07-10] WHICH IS EXTENDED
+FOR USE WITH ASKI versions 1.0 to 1.2 AND IS AVAILABLE VIA
+https://github.com/seismology-RUB/SPECFEM3D_GLOBE_for_ASKI , subdirectory specfem3d_globe/
+SOME FOLDERS LIKE utils, doc, EXAMPLES/* ETC. WERE REMOVED TO KEEP THIS COPY SMALL
+
+
+THE ORIGINAL FILE "README.md" WAS RENAMED "README.md.original"
+
+
+THE ADDITIONAL SUBFOLDER 
+EXAMPLES/ASKI_small/ 
+WAS ADDED CONTAINING ALL RELEVANT FILES THAT WERE USED TO PRODUCE THE EXAMPLE 
+ASKI_example_spherical_small.tar.gz AVAILABLE VIA 
+https://github.com/seismology-RUB/ASKI/releases/tag/v1.0
+
+
+ON YOUR SYSTEM, YOU NEED TO CONFIGURE AND COMPILE AGAIN, e.g.:
+> ./configure FC=gfortran MPIFC=mpif90
+> make xmeshfem3D xspecfem3D
+
+
+All modifications were applied under the terms of the GNU General 
+Public License version 2 (or any higher version, at your option)
+as published by the Free Software Foundation. 
+The modifications are distributed in the hope that they will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+Please also refer to the manual ../doc/SPECFEM3D_GLOBE_for_ASKI_manual.pdf
+for documentation of this extension package  SPECFEM3D_GLOBE 7.0.0 for ASKI 1.0 to 1.2
+
+Florian Schumacher, August 2016, Ruhr-Universitaet Bochum, Germany
