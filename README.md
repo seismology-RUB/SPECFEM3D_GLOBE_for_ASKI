@@ -136,7 +136,8 @@ different functionality compared with SPECFEM3D_GLOBE release version 7.0.0
 8. append content of file [SPECFEM3D_GLOBE_for_ASKI/parallel_ASKI.f90](parallel_ASKI.f90)
    to file `specfem3d_globe/src/shared/parallel.f90`
 9. recompile the relevant SPECFEM3D binaries by executing
-   ```make xmeshfem3D xspecfem3D
+   ```
+   make xmeshfem3D xspecfem3D
    ```
    
    in directory `specfem3d_globe/`
