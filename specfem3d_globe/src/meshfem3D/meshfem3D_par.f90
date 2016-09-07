@@ -640,27 +640,27 @@
 !
 !   Copyright 2016 Florian Schumacher (Ruhr-Universitaet Bochum, Germany)
 !
-!   This file is part of ASKI version 1.0.
+!   This file is part of ASKI version 1.2.
 !
-!   ASKI version 1.0 is free software: you can redistribute it and/or modify
+!   ASKI version 1.2 is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License as published by
 !   the Free Software Foundation, either version 2 of the License, or
 !   (at your option) any later version.
 !
-!   ASKI version 1.0 is distributed in the hope that it will be useful,
+!   ASKI version 1.2 is distributed in the hope that it will be useful,
 !   but WITHOUT ANY WARRANTY; without even the implied warranty of
 !   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !   GNU General Public License for more details.
 !
 !   You should have received a copy of the GNU General Public License
-!   along with ASKI version 1.0.  If not, see <http://www.gnu.org/licenses/>.
+!   along with ASKI version 1.2.  If not, see <http://www.gnu.org/licenses/>.
 !----------------------------------------------------------------------------
 !
 !
   module ASKI_external_model
 !
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! THIS MODULE IS AN ADAPTED VERSION OF FILE model_external_values.f90 
+! THIS MODULE ORIGINATES FROM  FILE model_external_values.f90 
 ! FROM 
 !    SPECFEM3D_Cartesian version 3.0 for ASKI 1.0
 ! WITH ITS MAIN STRUCTURE BEING BASED ON THE ORIGINAL FILE model_external_values.f90
@@ -768,9 +768,9 @@
     integer :: model_ASKI_pmtrz
 
     ! type interpolation between of external model that is used
-    ! type = 1 : case "shepard_standard" on first line in file "model_external_ASKI"
+    ! type = 1 : case "shepard_standard"
     !            interpolates model values by modified 3D Shepard interpolation with standard factor for influence radius
-    ! type = 2 : case "shepard_factor_radius" on first line in file "model_external_ASKI"
+    ! type = 2 : case "shepard_factor_radius"
     !            interpolates model values by modified 3D Shepard interpolation with given factor for influence radius
     integer :: model_ASKI_interpolation_type
 
@@ -795,6 +795,9 @@
   ! local parameters
   character(len=800) :: error_message
   integer :: maxnnodes
+  integer, dimension(1) :: i_array_one_value
+  real, dimension(1) :: r_array_one_value
+  logical, dimension(1) :: l_array_one_value
 
   ! dummy to ignore compiler warnings
   model_ASKI_myrank = myrank
@@ -857,16 +860,29 @@
 
   call synchronize_all()
 
-  call bcast_all_l(use_ASKI_background_model,1)
-  call bcast_all_l(impose_ASKI_inverted_model,1)
-  call bcast_all_l(impose_ASKI_checker_model,1)
+  if(myrank == 0) l_array_one_value(1) = use_ASKI_background_model
+  call bcast_all_l(l_array_one_value,1)
+  if(myrank /= 0) use_ASKI_background_model = l_array_one_value(1)
+
+  if(myrank == 0) l_array_one_value(1) = impose_ASKI_inverted_model
+  call bcast_all_l(l_array_one_value,1)
+  if(myrank /= 0) impose_ASKI_inverted_model = l_array_one_value(1)
+
+  if(myrank == 0) l_array_one_value(1) = impose_ASKI_checker_model
+  call bcast_all_l(l_array_one_value,1)
+  if(myrank /= 0) impose_ASKI_checker_model = l_array_one_value(1)
 
   if(use_ASKI_background_model) then
 
      call bcast_all_ch(file_ASKI_background_model,len_trim(file_ASKI_background_model))
 
-     call bcast_all_i(mA1Db%nlayers,1)
-     call bcast_all_i(maxnnodes,1)
+     if(myrank == 0) i_array_one_value(1) = mA1Db%nlayers
+     call bcast_all_i(i_array_one_value,1)
+     if(myrank /= 0) mA1Db%nlayers = i_array_one_value(1)
+
+     if(myrank == 0) i_array_one_value(1) = maxnnodes
+     call bcast_all_i(i_array_one_value,1)
+     if(myrank /= 0) maxnnodes = i_array_one_value(1)
 
      ! allocate for model values if I'm not rank 0
      if(myrank .ne. 0) allocate(mA1Db%nnodes(mA1Db%nlayers),mA1Db%depth(mA1Db%nlayers,maxnnodes), &
@@ -893,14 +909,25 @@
 
      call bcast_all_ch(file_ASKI_inverted_model,len_trim(file_ASKI_inverted_model))
 
-     call bcast_all_i(model_ASKI_interpolation_type,1)
+     if(myrank == 0) i_array_one_value(1) = model_ASKI_interpolation_type
+     call bcast_all_i(i_array_one_value,1)
+     if(myrank /= 0) model_ASKI_interpolation_type = i_array_one_value(1)
+
      select case(model_ASKI_interpolation_type)
      case( 2 )
-        call bcast_all_r(model_ASKI_factor_shepard_radius,1)
+        if(myrank == 0) r_array_one_value(1) = model_ASKI_factor_shepard_radius
+        call bcast_all_r(r_array_one_value,1)
+        if(myrank /= 0) model_ASKI_factor_shepard_radius = r_array_one_value(1)
      end select
 
-     call bcast_all_i(mAc%ncell,1)
-     call bcast_all_i(mAc%max_nnb,1)
+     if(myrank == 0) i_array_one_value(1) = mAc%ncell
+     call bcast_all_i(i_array_one_value,1)
+     if(myrank /= 0) mAc%ncell = i_array_one_value(1)
+
+     if(myrank == 0) i_array_one_value(1) = mAc%max_nnb
+     call bcast_all_i(i_array_one_value,1)
+     if(myrank /= 0) mAc%max_nnb = i_array_one_value(1)
+
      if(myrank .ne. 0) then
         allocate(mAc%cc(3,mAc%ncell),mAc%r(mAc%ncell),&
              mAc%nb(mAc%max_nnb+1,mAc%ncell))
@@ -909,16 +936,36 @@
      call bcast_all_r(mAc%r,size(mAc%r))
      call bcast_all_i(mAc%nb,size(mAc%nb))
 
-     call bcast_all_i(model_ASKI_pmtrz,1)
+     if(myrank == 0) i_array_one_value(1) = model_ASKI_pmtrz
+     call bcast_all_i(i_array_one_value,1)
+     if(myrank /= 0) model_ASKI_pmtrz = i_array_one_value(1)
+
      select case (model_ASKI_pmtrz)
      case ( ipmtrz_isoLame )
 
-        call bcast_all_r(mAisoL%maxr_rho,1)
-        call bcast_all_r(mAisoL%maxr_lambda,1)
-        call bcast_all_r(mAisoL%maxr_mu,1)
-        call bcast_all_i(mAisoL%nval_rho,1)
-        call bcast_all_i(mAisoL%nval_lambda,1)
-        call bcast_all_i(mAisoL%nval_mu,1)
+        if(myrank == 0) r_array_one_value(1) = mAisoL%maxr_rho
+        call bcast_all_r(r_array_one_value,1)
+        if(myrank /= 0) mAisoL%maxr_rho = r_array_one_value(1)
+
+        if(myrank == 0) r_array_one_value(1) = mAisoL%maxr_lambda
+        call bcast_all_r(r_array_one_value,1)
+        if(myrank /= 0) mAisoL%maxr_lambda = r_array_one_value(1)
+
+        if(myrank == 0) r_array_one_value(1) = mAisoL%maxr_mu
+        call bcast_all_r(r_array_one_value,1)
+        if(myrank /= 0) mAisoL%maxr_mu = r_array_one_value(1)
+
+        if(myrank == 0) i_array_one_value(1) = mAisoL%nval_rho
+        call bcast_all_i(i_array_one_value,1)
+        if(myrank /= 0) mAisoL%nval_rho = i_array_one_value(1)
+
+        if(myrank == 0) i_array_one_value(1) = mAisoL%nval_lambda
+        call bcast_all_i(i_array_one_value,1)
+        if(myrank /= 0) mAisoL%nval_lambda = i_array_one_value(1)
+
+        if(myrank == 0) i_array_one_value(1) = mAisoL%nval_mu
+        call bcast_all_i(i_array_one_value,1)
+        if(myrank /= 0) mAisoL%nval_mu = i_array_one_value(1)
 
         if(myrank .ne. 0) then
            if(mAisoL%nval_rho>0) allocate(mAisoL%idx_rho(mAisoL%nval_rho),&
@@ -944,12 +991,29 @@
 
      case ( ipmtrz_isoVelocity )
 
-        call bcast_all_r(mAisoV%maxr_rho,1)
-        call bcast_all_r(mAisoV%maxr_vp,1)
-        call bcast_all_r(mAisoV%maxr_vs,1)
-        call bcast_all_i(mAisoV%nval_rho,1)
-        call bcast_all_i(mAisoV%nval_vp,1)
-        call bcast_all_i(mAisoV%nval_vs,1)
+        if(myrank == 0) r_array_one_value(1) = mAisoV%maxr_rho
+        call bcast_all_r(r_array_one_value,1)
+        if(myrank /= 0) mAisoV%maxr_rho = r_array_one_value(1)
+
+        if(myrank == 0) r_array_one_value(1) = mAisoV%maxr_vp
+        call bcast_all_r(r_array_one_value,1)
+        if(myrank /= 0) mAisoV%maxr_vp = r_array_one_value(1)
+
+        if(myrank == 0) r_array_one_value(1) = mAisoV%maxr_vs
+        call bcast_all_r(r_array_one_value,1)
+        if(myrank /= 0) mAisoV%maxr_vs = r_array_one_value(1)
+
+        if(myrank == 0) i_array_one_value(1) = mAisoV%nval_rho
+        call bcast_all_i(i_array_one_value,1)
+        if(myrank /= 0) mAisoV%nval_rho = i_array_one_value(1)
+
+        if(myrank == 0) i_array_one_value(1) = mAisoV%nval_vp
+        call bcast_all_i(i_array_one_value,1)
+        if(myrank /= 0) mAisoV%nval_vp = i_array_one_value(1)
+
+        if(myrank == 0) i_array_one_value(1) = mAisoV%nval_vs
+        call bcast_all_i(i_array_one_value,1)
+        if(myrank /= 0) mAisoV%nval_vs = i_array_one_value(1)
 
         if(myrank .ne. 0) then
            if(mAisoV%nval_rho>0) allocate(mAisoV%idx_rho(mAisoV%nval_rho),&
@@ -990,9 +1054,17 @@
 
      call bcast_all_ch(file_ASKI_checker_model,len_trim(file_ASKI_checker_model))
 
-     call bcast_all_i(mAchk%nchecker_radius,1)
-     call bcast_all_i(mAchk%nchecker_lat,1)
-     call bcast_all_i(mAchk%nchecker_lon,1)
+     if(myrank == 0) i_array_one_value(1) = mAchk%nchecker_radius
+     call bcast_all_i(i_array_one_value,1)
+     if(myrank /= 0) mAchk%nchecker_radius = i_array_one_value(1)
+
+     if(myrank == 0) i_array_one_value(1) = mAchk%nchecker_lat
+     call bcast_all_i(i_array_one_value,1)
+     if(myrank /= 0) mAchk%nchecker_lat = i_array_one_value(1)
+
+     if(myrank == 0) i_array_one_value(1) = mAchk%nchecker_lon
+     call bcast_all_i(i_array_one_value,1)
+     if(myrank /= 0) mAchk%nchecker_lon = i_array_one_value(1)
 
      ! allocate for model values if I'm not rank 0
      if(myrank .ne. 0) allocate(mAchk%bchecker_radius(mAchk%nchecker_radius,2), &

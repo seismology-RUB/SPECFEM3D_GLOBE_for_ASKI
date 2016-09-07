@@ -223,6 +223,7 @@ subroutine prepare_timerun_ASKI()
 
   integer :: iproc
   integer, parameter :: itag = 100
+  integer, dimension(1) :: i_array_one_value
 
   if (CUSTOM_REAL /= SIZE_REAL) call exit_MPI_without_rank('so far, only single precision supported for ASKI output')
 
@@ -261,7 +262,8 @@ subroutine prepare_timerun_ASKI()
      ASKI_np_local_all(1) = ASKI_np_local ! this is me, rank 0
      do iproc = 1,NPROCTOT-1
         ! receive ASKI_np_local from rank iproc
-        call recv_i(ASKI_np_local_all(iproc+1),1,iproc,itag)
+        call recv_i(i_array_one_value,1,iproc,itag)
+        ASKI_np_local_all(iproc+1) = i_array_one_value(1)
      end do ! iproc
 
      if(sum(ASKI_np_local_all) .le. 0) then
@@ -271,7 +273,8 @@ subroutine prepare_timerun_ASKI()
 
   else ! (myrank == 0)
      ! send ASKI_np_local to rank 0
-     call send_i(ASKI_np_local,1,0,itag)
+     i_array_one_value(1) = ASKI_np_local
+     call send_i(i_array_one_value,1,0,itag)
 
   end if ! (myrank == 0)
 
