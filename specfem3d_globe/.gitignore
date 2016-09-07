@@ -1,11 +1,5 @@
-# List files that should not be committed
-.*swp
-.*swo
-.*swn
-*~
-
 # Configure time
-./Makefile
+/Makefile
 aclocal.m4
 autom4te.cache
 config.log
@@ -22,3 +16,7 @@ OUTPUT_FILES/*
 # Documentation
 doc/USER_MANUAL/figures/*-eps-converted-to.pdf
 
+# Trash files
+.*swp
+.*swo
+*~
