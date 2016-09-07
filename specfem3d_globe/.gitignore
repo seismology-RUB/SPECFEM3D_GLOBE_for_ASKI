@@ -12,6 +12,7 @@ setup/precision.h
 
 # Build time
 OUTPUT_FILES/*
+*.pyc
 
 # Documentation
 doc/USER_MANUAL/figures/*-eps-converted-to.pdf
