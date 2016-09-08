@@ -69,7 +69,7 @@ FILE_ASKI_CHECKER_MODEL =
 # ASKI_outfile is handled as a basename, to which ".main" and for each frequency ".jf######" 
 # (e.g. ".jf000013" for frequency index 13) is appended
 
-  ASKI_outfile = /home/florian/inversion/ASKI_example_spherical_small/iteration_step_001/kernel_green_tensors/kernel_gt_ZKR_N
+  ASKI_outfile = /home/florian/inversion/ASKI_example_spherical_small/iteration_step_001/kernel_displacements/kernel_displ_200801060514A
 
 
 # choose to overwrite existing ASKI output files, or to abort if files already exist
@@ -79,7 +79,7 @@ FILE_ASKI_CHECKER_MODEL =
 
 # id of ASKI output (e.g. eventID, station name plus component, etc.)
 
-  ASKI_output_ID = ZKR_N
+  ASKI_output_ID = 200801060514A
 
 
 # choose to deconvolve the derivative of the source time function from the wavefield spectra before writing them to files.
@@ -109,7 +109,7 @@ FILE_ASKI_CHECKER_MODEL =
 # the source position and source depth of this Green function (i.e. techincally the respective ASKI receiver 
 # position) must be defined as usual in the CMTSOLUTION file.
 
-  COMPUTE_ASKI_GREEN_FUNCTION = .true.
+  COMPUTE_ASKI_GREEN_FUNCTION = .false.
 
 
 # define the direction of the single force source of this Green function (if COMPUTE_ASKI_GREEN_FUNCTION = .true.)
