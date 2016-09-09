@@ -1,5 +1,7 @@
 # SPECFEM3D_GLOBE for ASKI
 
+### Extension package for [ASKI](https://github.com/seismology-RUB/ASKI): use [SPECFEM3D_GLOBE](https://github.com/geodynamics/specfem3d_globe) for solving the seismic forward problem
+
 SPECFEM3D_GLOBE for ASKI, as well as ASKI and some of its components, 
 documentation and examples are available under terms of the 
 [GNU General Public License](https://github.com/seismology-RUB/ASKI/blob/master/LICENSE)
