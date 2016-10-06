@@ -240,7 +240,7 @@
 
   if(use_ASKI_background_model) then
 
-     call bcast_all_ch(file_ASKI_background_model,len_trim(file_ASKI_background_model))
+     call bcast_all_ch(file_ASKI_background_model,MAX_STRING_LEN)
 
      if(myrank == 0) i_array_one_value(1) = mA1Db%nlayers
      call bcast_all_i(i_array_one_value,1)
@@ -273,7 +273,7 @@
 
   if(impose_ASKI_inverted_model) then
 
-     call bcast_all_ch(file_ASKI_inverted_model,len_trim(file_ASKI_inverted_model))
+     call bcast_all_ch(file_ASKI_inverted_model,MAX_STRING_LEN)
 
      if(myrank == 0) i_array_one_value(1) = model_ASKI_interpolation_type
      call bcast_all_i(i_array_one_value,1)
@@ -418,7 +418,7 @@
 
   if(impose_ASKI_checker_model) then
 
-     call bcast_all_ch(file_ASKI_checker_model,len_trim(file_ASKI_checker_model))
+     call bcast_all_ch(file_ASKI_checker_model,MAX_STRING_LEN)
 
      if(myrank == 0) i_array_one_value(1) = mAchk%nchecker_radius
      call bcast_all_i(i_array_one_value,1)
