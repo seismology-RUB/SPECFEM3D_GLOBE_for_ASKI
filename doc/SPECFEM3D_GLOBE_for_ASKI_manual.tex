@@ -398,6 +398,11 @@ are happy to hear about it. Please feel free to get in touch with the \ASKI{} de
 \item You must set \lcode{ROTATE_SEISMOGRAMS_RT = .false.} in the SPECFEM3D \lcode{Par_file} in order to ensure that 
   synthetic data (or measured data for synthetic studies) can be transformed to the spectral \ASKI{} format correctly (by programs
   as in sections~\myref{transform_synthetics}, \myref{transform_measured}).
+\item In file \lcode{constants.h}, you must set \lcode{ASSUME_PERFECT_SPHERE = .true.} in order to
+  assure proper functionality for \ASKI{}, as \ASKI{} interprets spherical event and station coordinates w.r.t.\ a sphere
+  and the spherical \ASKI{} inversion grids are based on perfect spheres. For the extended SPECFEM version
+  in \lcode{SPECFEM3D_GLOBE_for_ASKI/specfem3d_globe/}, this functionality is already assured by modification of file 
+  \lcode{SPECFEM3D_GLOBE_for_ASKI/specfem3d_globe/setup/constants.h.in} .
 \end{itemize}
 %
 %-------------------------------
