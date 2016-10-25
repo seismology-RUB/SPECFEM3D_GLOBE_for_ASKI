@@ -27,6 +27,9 @@ from os import environ as os_environ
 from os import mkdir as os_mkdir
 from os import path as os_path
 from os import listdir as os_listdir
+from os import access as os_access
+from os import W_OK as os_W_OK
+from os import X_OK as os_X_OK
 from sys import exit as sys_exit
 from sys import path as sys_path
 from time import time as time_time
@@ -97,9 +100,9 @@ send_emails = False
 email_receiver= 'receiver@mail.domain'
 email_sender = 'sender@mail.domain'
 # if send_emails = True, the script always writes an email after the 1st iteration and at the end of all iterations (or if script exits unintendedly)
-# number_of_emails_during_iteration defines the number of additional emails in between (1st and last iteration) while iterating over the simulations
-# set number_of_emails_during_iteration = 0 if you do not want to receive any additional emails aside from the two after 1st and last iteration
-number_of_emails_during_iteration = 0
+# number_of_intermediate_status_emails defines the number of additional emails in between (1st and last iteration) while iterating over the simulations
+# set number_of_intermediate_status_emails = 0 if you do not want to receive any additional emails aside from the two after 1st and last iteration
+number_of_intermediate_status_emails = 0
 #
 ####################################################################################################################
 ## define the (order of the) specfem3dForASKI simulations by strings displ_simulations,gt_simulations,measured_data_simulations
@@ -186,14 +189,32 @@ valid_gt_components = ['CX','CY','CZ','N','E','UP']
 class simulation:
 
     def __init__(self):
-
-        # number of processes defined in run_mesher_solver.bash (needed for function check_if_simulation_was_successful() )
-        nproc_list = [line.split('=')[1] for line in open('./run_mesher_solver.bash','r') if '=' in line and line.split('=')[0] == 'CPUs']
-        if len(nproc_list) != 1:
-            self.log("### STOP :  found "+str(len(nproc_list))+" possible values for 'CPUs' in './run_mesher_solver.bash': '"+"', '".join(nproc_list)+"'\n")
-            raise Exception("not exactly one possible value for CPUs in ./run_mesher_solver.bash; see logfile '"+logfile+"'")
-        else:
-            self.nproc = int(nproc_list[0])
+        # get number of processes from SPECFEM Par_file (optionally used in function check_process_sh() )
+        try:
+            Par_file = inputParameter(os_path.join(DATA_FILES_PATH,'Par_file'))
+        except:
+            self.log("   ERROR! could not create inputParameter object for Par_file '"+
+                     os_path.join(DATA_FILES_PATH,'Par_file')+"\n")
+            raise 
+        noKeys = Par_file.keysNotPresent(['NPROC_XI','NPROC_ETA'])
+        if len(noKeys) > 0:
+            self.log("   ERROR! the following keywords are required in Par_file '"+
+                     os_path.join(DATA_FILES_PATH,'Par_file')+"':\n"+
+                     "   "+',  '.join(noKeys)+"\n")
+            raise Exception("missing keywords in Par_file; see logfile '"+logfile+"'")
+        self.nproc_XI = Par_file.ival('NPROC_XI')
+        if self.nproc_XI is None:
+            self.log("   ERROR! could not read a valid integer for keyword 'NPROC_XI' in Par_file '"+
+                     os_path.join(DATA_FILES_PATH,'Par_file')+"':\n"+
+                     "   "+',  '.join(noKeys)+"\n")
+            raise Exception("no integer value for 'NPROC_XI' in Par_file; see logfile '"+logfile+"'")
+        self.nproc_ETA = Par_file.ival('NPROC_ETA')
+        if self.nproc_ETA is None:
+            self.log("   ERROR! could not read a valid integer for keyword 'NPROC_ETA' in Par_file '"+
+                     os_path.join(DATA_FILES_PATH,'Par_file')+"':\n"+
+                     "   "+',  '.join(noKeys)+"\n")
+            raise Exception("no integer value for 'NPROC_XI_ETA' in Par_file; see logfile '"+logfile+"'")
+        self.nproc = self.nproc_XI * self.nproc_ETA
 
         # open main parfile and check if all required keywords are present
         if not os_path.exists(main_parfile):
@@ -202,50 +223,98 @@ class simulation:
             raise Exception("main parameter file does not exist; see logfile '"+logfile+"'")
         try:
             self.mparam = inputParameter(main_parfile)
+            self.log("successfully read the main parameter file '"+main_parfile+"'\n\n")
         except:
             self.log("### STOP : could not create inputParameter object for main parameter file '"+
                      main_parfile+"', make sure that the file is of correct form\n\n")
             raise
+
         # check if all required keys are set
-        noKeys = self.mparam.keysNotPresent(['MAIN_PATH_INVERSION','CURRENT_ITERATION_STEP','ITERATION_STEP_PATH',
-                                            'PARFILE_ITERATION_STEP','FILE_STATION_LIST','FILE_EVENT_LIST',
-                                             'PATH_MEASURED_DATA','MEASURED_DATA_FREQUENCY_STEP'])
+        only_data_simulations = displ_simulations == '' and gt_simulations == ''
+        if only_data_simulations:
+            noKeys = self.mparam.keysNotPresent(['MAIN_PATH_INVERSION','FILE_STATION_LIST','FILE_EVENT_LIST',
+                                                 'PATH_MEASURED_DATA'])
+        else:
+            noKeys = self.mparam.keysNotPresent(['MAIN_PATH_INVERSION','CURRENT_ITERATION_STEP','ITERATION_STEP_PATH',
+                                                 'PARFILE_ITERATION_STEP','FILE_STATION_LIST','FILE_EVENT_LIST',
+                                                 'PATH_MEASURED_DATA','MEASURED_DATA_FREQUENCY_STEP'])
         if len(noKeys) > 0:
             self.log("### STOP : the following keywords are required in the main parameter file '"+
                      main_parfile+"':\n"+
                      "### "+',  '.join(noKeys)+"\n\n")
             raise Exception("missing keywords in main paramter file; see logfile '"+logfile+"'")
 
-        # store iteration step path for further use
-        self.iter_path = os_path.join(self.mparam.sval('MAIN_PATH_INVERSION'),self.mparam.sval('ITERATION_STEP_PATH')+
-                                      '%3.3i/'%self.mparam.ival('CURRENT_ITERATION_STEP'))
+        if only_data_simulations:
+            # check if the directory PATH_MEASURED_DATA is an existing path and whether you have write and execute permissions
+            if not os_path.isdir(self.mparam.sval('PATH_MEASURED_DATA')):
+                self.log("### STOP : as defined by the main parameter file, PATH_MEASURED_DATA = '"+
+                         self.mparam.sval('PATH_MEASURED_DATA')+"' is not an existing directory\n\n")
+                raise Exception("PATH_MEASURED_DATA is no existing directory; see logfile '"+logfile+"'")
+            if not (os_access(self.mparam.sval('PATH_MEASURED_DATA'),os_W_OK) and  os_access(self.mparam.sval('PATH_MEASURED_DATA'),os_X_OK)):
+                self.log("### STOP : you do not have write and execute permissions for PATH_MEASURED_DATA = '"+
+                         self.mparam.sval('PATH_MEASURED_DATA')+"' (as defined by the main parameter file)\n\n")
+                raise Exception("no write and execute permissions for PATH_MEASURED_DATA; see logfile '"+logfile+"'")
+        else:
+            # check if the iteration step path, as defined by the main parfile, is an existing path and you have write and execute permissions
+            # store iteration step path for further use
+            self.iter_path = os_path.join(self.mparam.sval('MAIN_PATH_INVERSION'),self.mparam.sval('ITERATION_STEP_PATH')+
+                                          '%3.3i/'%self.mparam.ival('CURRENT_ITERATION_STEP'))
+            if not os_path.isdir(self.iter_path):
+                self.log("### STOP : as defined by the main parameter file, the iteration step path '"+
+                         self.iter_path+"' is not an existing directory\n\n")
+                raise Exception("iteration step path is no existing directory; see logfile '"+logfile+"'")
 
-        # open iteration step parfile and check if all required keywords are present
-        iter_parfile = os_path.join(self.iter_path,self.mparam.sval('PARFILE_ITERATION_STEP'))
-        if not os_path.exists(iter_parfile):
-            self.log("### STOP : the iteration step parameter file '"+iter_parfile+"' as derived from the main "+
-                     "parameter file does not exist, please make sure that the settings of MAIN_PATH_INVERSION, "+
-                     "CURRENT_ITERATION_STEP, ITERATION_STEP_PATH and PARFILE_ITERATION_STEP in main parameter file '"+
-                     main_parfile+"' is correctly set\n\n")
-            raise Exception("iteration step parameter file does not exist; see logfile '"+logfile+"'")
-        try:
-            self.iparam = inputParameter(iter_parfile)
-        except:
-            self.log("### STOP : could not create inputParameter object for the iteration step parameter file '"+
-                     iter_parfile+"', make sure that the file is of correct form\n\n")
-            raise
-        # check if all required keys are set
-        noKeys = self.iparam.keysNotPresent(['ITERATION_STEP_NUMBER_OF_FREQ','ITERATION_STEP_INDEX_OF_FREQ',
-                                             'PATH_KERNEL_DISPLACEMENTS','PATH_KERNEL_GREEN_TENSORS',
-                                             'TYPE_INVERSION_GRID','PARFILE_INVERSION_GRID'])
-        if len(noKeys) > 0:
-            self.log("### STOP : the following keywords are required in iteration step parameter file '"+
-                     iter_parfile+"':\n"+
-                     "### "+',  '.join(noKeys)+"\n\n")
-            raise Exception("missing keywords in iteration step paramter file; see logfile '"+logfile+"'")
+            # open iteration step parfile and check if all required keywords are present
+            iter_parfile = os_path.join(self.iter_path,self.mparam.sval('PARFILE_ITERATION_STEP'))
+            if not os_path.exists(iter_parfile):
+                self.log("### STOP : the iteration step parameter file '"+iter_parfile+"' as derived from the main "+
+                         "parameter file does not exist, please make sure that the settings of MAIN_PATH_INVERSION, "+
+                         "CURRENT_ITERATION_STEP, ITERATION_STEP_PATH and PARFILE_ITERATION_STEP in main parameter file '"+
+                         main_parfile+"' is correctly set\n\n")
+                raise Exception("iteration step parameter file does not exist; see logfile '"+logfile+"'")
+            try:
+                self.iparam = inputParameter(iter_parfile)
+                self.log("successfully read the iteration step parameter file '"+iter_parfile+"'\n\n")
+            except:
+                self.log("### STOP : could not create inputParameter object for the iteration step parameter file '"+
+                         iter_parfile+"', make sure that the file is of correct form\n\n")
+                raise
+            # check if all required keys are set
+            noKeys = self.iparam.keysNotPresent(['ITERATION_STEP_NUMBER_OF_FREQ','ITERATION_STEP_INDEX_OF_FREQ',
+                                                 'PATH_KERNEL_DISPLACEMENTS','PATH_KERNEL_GREEN_TENSORS',
+                                                 'TYPE_INVERSION_GRID','PARFILE_INVERSION_GRID'])
+            if len(noKeys) > 0:
+                self.log("### STOP : the following keywords are required in iteration step parameter file '"+
+                         iter_parfile+"':\n"+
+                         "### "+',  '.join(noKeys)+"\n\n")
+                raise Exception("missing keywords in iteration step paramter file; see logfile '"+logfile+"'")
+
+            # check if for displ simulations, PATH_KERNEL_DISPLACEMENT is an existing writeable, executable directory
+            if displ_simulations != '':
+                check_dir = os_path.join(self.iter_path,self.iparam.sval('PATH_KERNEL_DISPLACEMENTS'))
+                if not os_path.isdir(check_dir):
+                    self.log("### STOP : as conventionally defined by the main and iter parameter files, "+
+                             +"the path for the kernel displacement output '"+check_dir+"' is not an existing directory\n\n")
+                    raise Exception("path for kernel displacement output is no existing directory; see logfile '"+logfile+"'")
+                if not (os_access(check_dir,os_W_OK) and os_access(check_dir,os_X_OK)):
+                    self.log("### STOP : you do not have write and execute permissions for the path for the kernel displacement output '"+
+                             check_dir+"' (as defined conventionally by the main and iter parfiles)\n\n")
+                    raise Exception("no write and execute permissions for kernel displacement output path; see logfile '"+logfile+"'")
+
+            # check if for gt simulations, PATH_KERNEL_GREEN_TENSORS is an existing writeable, executable directory
+            if gt_simulations != '':
+                check_dir = os_path.join(self.iter_path,self.iparam.sval('PATH_KERNEL_GREEN_TENSORS'))
+                if not os_path.isdir(check_dir):
+                    self.log("### STOP : as conventionally defined by the main and iter parameter files, "+
+                             +"the path for the kernel Green tensor output '"+check_dir+"' is not an existing directory\n\n")
+                    raise Exception("path for kernel Green tensor output is no existing directory; see logfile '"+logfile+"'")
+                if not (os_access(check_dir,os_W_OK) and os_access(check_dir,os_X_OK)):
+                    self.log("### STOP : you do not have write and execute permissions for the path for the kernel Green tensor output '"+
+                             check_dir+"' (as defined conventionally by the main and iter parfiles)\n\n")
+                    raise Exception("no write and execute permissions for kernel Green tensor output path; see logfile '"+logfile+"'")
 
         # in case of define_ASKI_output_volume_by_inversion_grid, we also need the content of PARFILE_INVERSION_GRID
-        if define_ASKI_output_volume_by_inversion_grid:
+        if define_ASKI_output_volume_by_inversion_grid and not only_data_simulations:
             if self.iparam.sval('TYPE_INVERSION_GRID') == 'schunkInversionGrid':
                 ASKI_type_inversion_grid_char = 'schunkInversionGrid'
                 self.ASKI_type_inversion_grid = '1'
@@ -518,6 +587,7 @@ class simulation:
         self.gt_comp_files = []
         self.append_valid_tasks()
         for staname,file_content in self.gt_comp_files:
+            # only if there are any gt simulations, this loop is entered at all (and self.iparam , self.iter_path were initated before)
             filename = os_path.join(self.iter_path,self.iparam.sval('PATH_KERNEL_GREEN_TENSORS'),'kernel_gt_'+staname+'.comp')
             try:
                 open(filename,'w').write(file_content)
@@ -527,9 +597,9 @@ class simulation:
                 raise Exception("could not write a Green tensor components file; see logfile '"+logfile+"'")
 
         self.index_iteration_send_email = [0]
-        if type(number_of_emails_during_iteration) is int:
-            self.index_iteration_send_email.extend([int( (i+1.)*max(float(len(self.all_tasks)-1)/float(number_of_emails_during_iteration+1),1.) )
-                                                    for i in range(min(number_of_emails_during_iteration,len(self.all_tasks)-2))])
+        if type(number_of_intermediate_status_emails) is int:
+            self.index_iteration_send_email.extend([int( (i+1.)*max(float(len(self.all_tasks)-1)/float(number_of_intermediate_status_emails+1),1.) )
+                                                    for i in range(min(number_of_intermediate_status_emails,len(self.all_tasks)-2))])
 
         # log initial information
         if runs_on_SGE:
@@ -538,13 +608,19 @@ class simulation:
                             SGE_pe_hostfile_content+'--- END CONTENT PE_HOSTFILE ---')
         else:
             log_SGE_info = ''
+        if not only_data_simulations:
+            log_iter_info = ("iteration step %i\n"%self.mparam.ival('CURRENT_ITERATION_STEP')+
+                             "iteration step specific parameter file: '"+iter_parfile+"'\n")
+        else:
+            log_iter_info = ""
         self.log('################################################################################\n'+
                  "Welcome to these automated SPECFEM3D_GLOBE simulations for ASKI\n"+
                  log_SGE_info+"\n\n"+
                  "main ASKI parameter file: '"+main_parfile+"'\n"+
-                 "iteration step %i\n"%self.mparam.ival('CURRENT_ITERATION_STEP')+
-                 "iteration step specific parameter file: '"+iter_parfile+"'\n"+
-                 "'./run_mesher_solver.bash' tells me, we're using "+str(self.nproc)+" procs\n"+
+                 log_iter_info+
+                 "'"+os_path.join(DATA_FILES_PATH,'Par_file')+"' tells me, we're using a total of "+str(self.nproc)+" procs:\n"+
+                 "  NPROC_XI  = "+str(self.nproc_XI)+"\n"
+                 "  NPROC_ETA = "+str(self.nproc_ETA)+"\n"
                  "OUTPUT_FILES_PATH = '"+OUTPUT_FILES_PATH+"'\n"+
                  "LOCAL_PATH = '"+LOCAL_PATH+"'\n"+
                  "DATA_FILES_PATH = '"+DATA_FILES_PATH+"'\n"+
@@ -1050,7 +1126,7 @@ class simulation:
             slon = self.evlist.events[sid]['slon']
             sdepth = self.evlist.events[sid]['sdepth']
             styp = self.evlist.events[sid]['styp']
-            self.outfile_base = (self.mparam.sval('PATH_MEASURED_DATA')+'data_'+sid)
+            self.outfile_base = os_path.join(self.mparam.sval('PATH_MEASURED_DATA'),'data_'+sid)
             self.log("   in setSpecfemGlobeParameters:\n"+
                      "      this is event evid = "+sid+"\n"+
                      "      source source lat[deg], lon[deg], depth[km] = "+', '.join([slat,slon,sdepth])+"\n"+
