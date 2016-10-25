@@ -164,8 +164,10 @@ measured_data_simulations = ''
 #
 # DATA OUTPUT
 #
-# specify here, whether or not the SPECFEM3D_GLOBE STATIONS file should be produced by ASKI (based on ASKI's stations file)
-create_specfem_stations = False
+# Specify here, whether or not the SPECFEM3D_GLOBE STATIONS file should be produced by ASKI (based on ASKI's stations file).
+# In case there are any Green tensor simulations, it is highly recommended to set this True in order to prevent SPECFEM runtime 
+# errors (related to identical source and receiver positions when computing epicentral distances).
+create_specfem_stations = True
 # in case create_specfem_stations = True , specify whether or not the column "altitude" in 
 # ASKI's stations file should be ignored (i.e. set to 0.0 in SPECFEM STATIONS file) 
 ignore_aski_stations_altitude = True
@@ -294,7 +296,7 @@ class simulation:
                 check_dir = os_path.join(self.iter_path,self.iparam.sval('PATH_KERNEL_DISPLACEMENTS'))
                 if not os_path.isdir(check_dir):
                     self.log("### STOP : as conventionally defined by the main and iter parameter files, "+
-                             +"the path for the kernel displacement output '"+check_dir+"' is not an existing directory\n\n")
+                             "the path for the kernel displacement output '"+check_dir+"' is not an existing directory\n\n")
                     raise Exception("path for kernel displacement output is no existing directory; see logfile '"+logfile+"'")
                 if not (os_access(check_dir,os_W_OK) and os_access(check_dir,os_X_OK)):
                     self.log("### STOP : you do not have write and execute permissions for the path for the kernel displacement output '"+
@@ -306,7 +308,7 @@ class simulation:
                 check_dir = os_path.join(self.iter_path,self.iparam.sval('PATH_KERNEL_GREEN_TENSORS'))
                 if not os_path.isdir(check_dir):
                     self.log("### STOP : as conventionally defined by the main and iter parameter files, "+
-                             +"the path for the kernel Green tensor output '"+check_dir+"' is not an existing directory\n\n")
+                             "the path for the kernel Green tensor output '"+check_dir+"' is not an existing directory\n\n")
                     raise Exception("path for kernel Green tensor output is no existing directory; see logfile '"+logfile+"'")
                 if not (os_access(check_dir,os_W_OK) and os_access(check_dir,os_X_OK)):
                     self.log("### STOP : you do not have write and execute permissions for the path for the kernel Green tensor output '"+
@@ -1037,9 +1039,6 @@ class simulation:
             nwname = self.statlist.stations[staname]['netcode']
             lat = self.statlist.stations[staname]['lat']
             lon = self.statlist.stations[staname]['lon']
-            # use value of 'alt' to put on CMTSOLUTION line 'depth:', in order to allow receivers not to be located on the surface
-            # it makes sense to use 'USE_SOURCES_RECVS_Z = .true.' in constants.h, as then depth and , hence, the value for 'alt'
-            # is interpreted as the 'Z' coordinate
             alt = self.statlist.stations[staname]['alt']
             df = self.mparam.sval('MEASURED_DATA_FREQUENCY_STEP')
             nf = self.iparam.sval('ITERATION_STEP_NUMBER_OF_FREQ')
@@ -1054,32 +1053,39 @@ class simulation:
                      "      kernel green tensor output file (basename) = '"+self.outfile_base+"'\n")
 
             if create_specfem_stations:
-                log_string = ("      the SPECFEM STATIONS file was created from the "+str(self.statlist.nstat)+" stations in ASKI's station list file")
+                log_string = ("      the SPECFEM STATIONS file was created from the "+str(self.statlist.nstat)+" stations in ASKI's station list file,\n"+
+                              "         EXCLUDING station '"+staname+"' (where the source is located)")
                 if ignore_aski_stations_altitude:
                     STATIONS_content = '\n'.join(['   '.join([self.statlist.stations[i]['staname'], self.statlist.stations[i]['netcode'], 
                                                               self.statlist.stations[i]['lat'], self.statlist.stations[i]['lon'],
                                                               '0.0', '0.0'
                                                               ])
                                                   for i in range(self.statlist.nstat)
+                                                  if not self.statlist.stations[i]['staname'] == staname  # exclude the station at which the Green source is located
                                                   ])+'\n'
-                    log_string += ", setting any altitudes to '0.0'"
+                    log_string += " and setting any altitudes to '0.0'"
                 else:
                     STATIONS_content = '\n'.join(['   '.join([self.statlist.stations[i]['staname'], self.statlist.stations[i]['netcode'], 
                                                               self.statlist.stations[i]['lat'], self.statlist.stations[i]['lon'],
                                                               self.statlist.stations[i]['alt'], '0.0'
                                                               ])
                                                   for i in range(self.statlist.nstat)
+                                                  if not self.statlist.stations[i]['staname'] == staname  # exclude the station at which the Green source is located
                                                   ])+'\n'
-                    log_string += ", keeping all original altitudes"
+                    log_string += " and keeping all original altitudes"
                 try:
                     open(os_path.join(DATA_FILES_PATH,'STATIONS'),'w').write(STATIONS_content)
                 except:
-                    self.log("   ERROR! in setSpecfemGlobeParameters: could not open STATIONS file '"+os_path.join(DATA_FILES_PATH,'STATIONS')+
-                                    "' to write\n")
+                    self.log("   ERROR! in setSpecfemGlobeParameters: could not open STATIONS file '"+
+                             os_path.join(DATA_FILES_PATH,'STATIONS')+"' to write\n")
                     raise
                 self.log(log_string+"\n")
             else:
-                self.log("      the SPECFEM STATIONS file was not modified by this script, you should have set it yourself correctly\n")
+                self.log("      the SPECFEM STATIONS file was not modified by this script, you should have set it yourself correctly\n"+
+                         "   WARNING! > when calculating Green's functions, SPECFEM3D_GLOBE might raise a runtime error of form\n"+
+                         "   WARNING! > 'Floating-point exception - erroneous arithmetic operation.'\n"+
+                         "   WARNING! > This exception might occurr in subroutine locate_receivers() when computing epicentral distances, \n"+
+                         "   WARNING! > if station '"+staname+"' at which this Green source is located is also contained in the current STATIONS file.\n")
 
             if os_path.exists(self.outfile_base+'_OUTPUT_FILES'):
                 if self.overwrite_ASKI_output:
