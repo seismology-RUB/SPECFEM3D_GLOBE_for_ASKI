@@ -196,6 +196,10 @@ program transformSpecfem3dGlobeMeasuredData
   ! -diffts
   diff_time_series = (ap.optset."-diffts")
 !
+  if(deconvolve_stf .and. diff_time_series) then
+     write(*,*) "WARNING: both, -dconv AND -diffts are set, resulting in velocity spectra w.r.t. dirac!"
+  end if
+!
   ! -scale
   scale_time_series = (ap.optset."-scale")
   if(scale_time_series) then
@@ -429,20 +433,6 @@ program transformSpecfem3dGlobeMeasuredData
      if(scale_time_series) then
         traces = traces*ts_scale_factor
      end if
-     ! if(diff_time_series) then ! differentiate by central differences
-     !    do itrace = 1,size(traces,2)
-     !       ! treat first sample separately (right finite difference)
-     !       tmp_sample = traces(1,itrace) ! remember current sample for differentiation of the next sample
-     !       traces(1,itrace) = real(  ( dble(traces(2,itrace)) - dble(traces(1,itrace)) )*one_over_DT  )
-     !       do isamp = 2,size(traces,1)-1
-     !          rtmp = real(  ( dble(traces(isamp+1,itrace)) - dble(tmp_sample) )*one_over_2DT  )
-     !          tmp_sample = traces(isamp,itrace)
-     !          traces(isamp,itrace) = rtmp
-     !       end do ! isamp
-     !       ! treat last sample separately (left finite difference)
-     !       traces(size(traces,1),itrace) = real(  (dble(traces(size(traces,1),itrace))-dble(tmp_sample))*one_over_DT  )
-     !    end do ! itrace
-     ! end if ! diff_time_series
 !
      if(deconvolve_stf) then
         write(*,*) "read, normalize and differentiate source time function of event '",trim(evid),"' from file '",&

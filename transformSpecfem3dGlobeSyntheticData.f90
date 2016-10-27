@@ -335,6 +335,13 @@ program transformSpecfem3dGlobeSyntheticData
         ! steep error function.
         ! --> use velocity seismograms (i.e. differentiate the displacement seismograms) and deconvolve the 
         ! differentiated source time function (for reasons of numerical stability at very small frequencies)
+        !                                                                                                                                                                                                                                    
+        ! ALSO IMPORTANT TO NOTE HERE:
+        ! for stability reasons differentiate the source-time function (error function) in the time domain (get Gaussian)
+        ! before it is Fourier transformed and deconvolved (Gaussian spectrum is close to amplitude 1 everywhere).
+        ! Apply the very same DFT object here, which was initiated INCLUDING hanning taper. THIS SHOULD ONLY BE DONE
+        ! WHEN DIFFERENTIATING THE ERROR FUNCTION. If a source time function is Fourier transformed which is NOT
+        ! zero on the tail, you should initiate a separate DFT object WITHOUT taper!
 !
         if(associated(stf)) deallocate(stf)
         write(*,*) "read, normalize and differentiate source time function of event '",trim(evid),"' from file '",&
